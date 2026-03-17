@@ -1,3 +1,4 @@
+import { History, ChevronRight } from "lucide-react";
 import { History, ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -7,8 +8,12 @@ interface Props {
   onClear: () => void;
 }
 
+const PromptHistory = ({ history, onSelect }: Props) => (
 const PromptHistory = ({ history, onSelect, onClear }: Props) => (
   <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+    <div className="flex items-center gap-2">
+      <History className="w-4 h-4 text-primary" />
+      <span className="text-sm font-medium text-foreground">Lịch sử Prompt</span>
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
         <History className="w-4 h-4 text-primary" />
