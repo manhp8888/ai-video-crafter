@@ -90,6 +90,21 @@ export function buildSceneLines(data: PromptData) {
   });
 }
 
+
+function stripExistingSceneSection(content: string) {
+  return content
+    .replace(/\n?##\s*Prompt theo cảnh[\s\S]*/i, "")
+    .replace(/\n?##\s*Scene(?:s|\s+Breakdown)?[\s\S]*/i, "")
+    .trim();
+}
+
+export function upsertSceneSection(content: string, data: PromptData) {
+  const cleaned = stripExistingSceneSection(content);
+  const sceneHeading = data.outputLanguage === "English" ? "## Scenes" : "## Prompt theo cảnh";
+  const scenes = buildSceneLines(data).join("\n");
+  return `${cleaned}\n\n${sceneHeading}\n${scenes}`.trim();
+}
+
 export function generatePrompt(data: PromptData) {
   const style = data.style || "Cinematic";
   const camera = data.camera || "Slow Zoom";
