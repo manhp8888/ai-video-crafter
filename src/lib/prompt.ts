@@ -44,9 +44,13 @@ function translateLabel(value: string, lang: string) {
   return mapping[value] || value;
 }
 
-function parseDurationSeconds(duration: string) {
+export function parseDurationSeconds(duration: string) {
   const match = duration.match(/\d+/);
   return match ? Number(match[0]) : 10;
+}
+
+export function calculateSceneCount(duration: string) {
+  return Math.ceil(parseDurationSeconds(duration) / 8);
 }
 
 function buildSceneRanges(durationSeconds: number, sceneCount: number) {
@@ -61,6 +65,31 @@ function buildSceneRanges(durationSeconds: number, sceneCount: number) {
   return ranges;
 }
 
+export function buildSceneLines(data: PromptData) {
+  const camera = data.camera || "Slow Zoom";
+  const style = data.style || "Cinematic";
+  const mood = data.mood || "Epic";
+  const duration = data.duration || "10 giây";
+  const idea = data.idea.trim() || "một khung cảnh thiên nhiên ngoạn mục";
+  const outputLanguage = data.outputLanguage || "Tiếng Việt";
+
+  const sceneCount = calculateSceneCount(duration);
+  const durationSeconds = parseDurationSeconds(duration);
+  const ranges = buildSceneRanges(durationSeconds, sceneCount);
+
+  const cameraOut = translateLabel(camera, outputLanguage);
+  const styleOut = translateLabel(style, outputLanguage);
+  const moodOut = translateLabel(mood, outputLanguage);
+
+  return ranges.map((range, index) => {
+    if (outputLanguage === "English") {
+      return `Scene ${index + 1} (${range.start}-${range.end}s): Camera ${camera.toLowerCase()}, ${style.toLowerCase()} visual of ${idea}, keep ${mood.toLowerCase()} tone.`;
+    }
+
+    return `Cảnh ${index + 1} (${range.start}-${range.end}s): Máy quay ${cameraOut.toLowerCase()}, khung hình ${styleOut.toLowerCase()} về ${idea}, giữ cảm xúc ${moodOut.toLowerCase()}.`;
+  });
+}
+
 export function generatePrompt(data: PromptData) {
   const style = data.style || "Cinematic";
   const camera = data.camera || "Slow Zoom";
@@ -72,7 +101,7 @@ export function generatePrompt(data: PromptData) {
   const outputLanguage = data.outputLanguage || "Tiếng Việt";
   const idea = data.idea.trim() || "một khung cảnh thiên nhiên ngoạn mục";
   const durationSeconds = parseDurationSeconds(duration);
-  const sceneCount = Math.ceil(durationSeconds / 8);
+  const sceneCount = calculateSceneCount(duration);
 
   const styleOut = translateLabel(style, outputLanguage);
   const cameraOut = translateLabel(camera, outputLanguage);
@@ -104,14 +133,7 @@ export function generatePrompt(data: PromptData) {
       ? `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] ${durationSeconds}-second ${style.toLowerCase()} video about ${idea}. Shot with ${camera.toLowerCase()}, ${lighting.toLowerCase()}, mood ${mood.toLowerCase()}, high detail, 4K, cinematic grading, pro composition. Generate ${sceneCount} scenes for a ${durationSeconds} second video. Each scene should include: scene number, time range, camera movement, description. Make sure the total scene timing equals ${durationSeconds} seconds. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${durationSeconds}s`
       : `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] Video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Quay bằng ${cameraOut.toLowerCase()}, ${lightingOut.toLowerCase()}, cảm xúc ${moodOut.toLowerCase()}, chi tiết cao, 4K, màu điện ảnh, bố cục chuyên nghiệp. Tạo ${sceneCount} cảnh cho video ${durationSeconds} giây. Mỗi cảnh gồm: số cảnh, khoảng thời gian, chuyển động máy quay, mô tả. Đảm bảo tổng thời lượng các cảnh đúng bằng ${durationSeconds} giây. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${durationSeconds}s`;
 
-  const ranges = buildSceneRanges(durationSeconds, sceneCount);
-  const scenes = ranges.map((range, index) => {
-    if (outputLanguage === "English") {
-      return `Scene ${index + 1} (${range.start}-${range.end}s): Camera ${camera.toLowerCase()}, ${style.toLowerCase()} visual of ${idea}, keep ${mood.toLowerCase()} tone.`;
-    }
-
-    return `Cảnh ${index + 1} (${range.start}-${range.end}s): Máy quay ${cameraOut.toLowerCase()}, khung hình ${styleOut.toLowerCase()} về ${idea}, giữ cảm xúc ${moodOut.toLowerCase()}.`;
-  });
+  const scenes = buildSceneLines(data);
 
   return `## Tiêu đề\n${title}\n\n## Hashtag\n${hashtags}\n\n## Mô tả video chuẩn SEO\n${description}\n\n## Prompt tạo ảnh bìa\n${coverPrompt}\n\n## Prompt tổng\n${masterPrompt}\n\n## Prompt theo cảnh\n${scenes.join("\n")}`;
 }
