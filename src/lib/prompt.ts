@@ -23,6 +23,7 @@ function translateLabel(value: string, lang: string) {
     Fantasy: "Giả tưởng",
     Documentary: "Tài liệu",
     "Pixar Style": "Phong cách Pixar",
+    "Static Shot": "Cảnh tĩnh",
     "Slow Zoom": "Zoom chậm",
     "Drone Shot": "Cảnh drone",
     "Tracking Shot": "Cảnh bám theo",
@@ -43,6 +44,23 @@ function translateLabel(value: string, lang: string) {
   return mapping[value] || value;
 }
 
+function parseDurationSeconds(duration: string) {
+  const match = duration.match(/\d+/);
+  return match ? Number(match[0]) : 10;
+}
+
+function buildSceneRanges(durationSeconds: number, sceneCount: number) {
+  const ranges: Array<{ start: number; end: number }> = [];
+
+  for (let i = 0; i < sceneCount; i += 1) {
+    const start = Math.floor((i * durationSeconds) / sceneCount);
+    const end = i === sceneCount - 1 ? durationSeconds : Math.floor(((i + 1) * durationSeconds) / sceneCount);
+    ranges.push({ start, end });
+  }
+
+  return ranges;
+}
+
 export function generatePrompt(data: PromptData) {
   const style = data.style || "Cinematic";
   const camera = data.camera || "Slow Zoom";
@@ -53,6 +71,8 @@ export function generatePrompt(data: PromptData) {
   const inputLanguage = data.inputLanguage || "Tiếng Việt";
   const outputLanguage = data.outputLanguage || "Tiếng Việt";
   const idea = data.idea.trim() || "một khung cảnh thiên nhiên ngoạn mục";
+  const durationSeconds = parseDurationSeconds(duration);
+  const sceneCount = Math.ceil(durationSeconds / 8);
 
   const styleOut = translateLabel(style, outputLanguage);
   const cameraOut = translateLabel(camera, outputLanguage);
@@ -61,7 +81,7 @@ export function generatePrompt(data: PromptData) {
 
   const title =
     outputLanguage === "English"
-      ? `${style} ${duration} AI Video: ${idea}`
+      ? `${style} ${durationSeconds}s AI Video: ${idea}`
       : `${styleOut} ${duration}: ${idea}`;
 
   const hashtags =
@@ -71,7 +91,7 @@ export function generatePrompt(data: PromptData) {
 
   const description =
     outputLanguage === "English"
-      ? `Create a ${duration} ${style.toLowerCase()} video about ${idea}. Camera: ${camera.toLowerCase()}, lighting: ${lighting.toLowerCase()}, mood: ${mood.toLowerCase()}. Optimized for TikTok/Reels/Shorts with engaging pacing and a clear visual hook.`
+      ? `Create a ${durationSeconds}-second ${style.toLowerCase()} video about ${idea}. Camera: ${camera.toLowerCase()}, lighting: ${lighting.toLowerCase()}, mood: ${mood.toLowerCase()}. Optimized for TikTok/Reels/Shorts with engaging pacing and a clear visual hook.`
       : `Tạo video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Máy quay: ${cameraOut.toLowerCase()}, ánh sáng: ${lightingOut.toLowerCase()}, cảm xúc: ${moodOut.toLowerCase()}. Tối ưu cho TikTok/Reels/Shorts với nhịp dựng cuốn hút và hook mạnh ngay 3 giây đầu.`;
 
   const coverPrompt =
@@ -81,21 +101,17 @@ export function generatePrompt(data: PromptData) {
 
   const masterPrompt =
     outputLanguage === "English"
-      ? `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] ${duration} ${style.toLowerCase()} video about ${idea}. Shot with ${camera.toLowerCase()}, ${lighting.toLowerCase()}, mood ${mood.toLowerCase()}, high detail, 4K, cinematic grading, pro composition. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${duration}`
-      : `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] Video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Quay bằng ${cameraOut.toLowerCase()}, ${lightingOut.toLowerCase()}, cảm xúc ${moodOut.toLowerCase()}, chi tiết cao, 4K, màu điện ảnh, bố cục chuyên nghiệp. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${duration}`;
+      ? `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] ${durationSeconds}-second ${style.toLowerCase()} video about ${idea}. Shot with ${camera.toLowerCase()}, ${lighting.toLowerCase()}, mood ${mood.toLowerCase()}, high detail, 4K, cinematic grading, pro composition. Generate ${sceneCount} scenes for a ${durationSeconds} second video. Each scene should include: scene number, time range, camera movement, description. Make sure the total scene timing equals ${durationSeconds} seconds. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${durationSeconds}s`
+      : `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] Video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Quay bằng ${cameraOut.toLowerCase()}, ${lightingOut.toLowerCase()}, cảm xúc ${moodOut.toLowerCase()}, chi tiết cao, 4K, màu điện ảnh, bố cục chuyên nghiệp. Tạo ${sceneCount} cảnh cho video ${durationSeconds} giây. Mỗi cảnh gồm: số cảnh, khoảng thời gian, chuyển động máy quay, mô tả. Đảm bảo tổng thời lượng các cảnh đúng bằng ${durationSeconds} giây. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${durationSeconds}s`;
 
-  const scenes =
-    outputLanguage === "English"
-      ? [
-          "Scene 1 (0-3s): Hook shot, reveal main subject with strong motion and contrast.",
-          "Scene 2 (3-7s): Mid-shot storytelling, emphasize product/character details.",
-          "Scene 3 (7-end): Hero ending shot, logo/message reveal with cinematic transition.",
-        ]
-      : [
-          "Cảnh 1 (0-3s): Cảnh hook, lộ chủ thể chính với chuyển động mạnh và tương phản cao.",
-          "Cảnh 2 (3-7s): Cảnh trung, kể chuyện và nhấn chi tiết sản phẩm/nhân vật.",
-          "Cảnh 3 (7s-cuối): Cảnh hero kết thúc, xuất hiện thông điệp/logo với transition điện ảnh.",
-        ];
+  const ranges = buildSceneRanges(durationSeconds, sceneCount);
+  const scenes = ranges.map((range, index) => {
+    if (outputLanguage === "English") {
+      return `Scene ${index + 1} (${range.start}-${range.end}s): Camera ${camera.toLowerCase()}, ${style.toLowerCase()} visual of ${idea}, keep ${mood.toLowerCase()} tone.`;
+    }
+
+    return `Cảnh ${index + 1} (${range.start}-${range.end}s): Máy quay ${cameraOut.toLowerCase()}, khung hình ${styleOut.toLowerCase()} về ${idea}, giữ cảm xúc ${moodOut.toLowerCase()}.`;
+  });
 
   return `## Tiêu đề\n${title}\n\n## Hashtag\n${hashtags}\n\n## Mô tả video chuẩn SEO\n${description}\n\n## Prompt tạo ảnh bìa\n${coverPrompt}\n\n## Prompt tổng\n${masterPrompt}\n\n## Prompt theo cảnh\n${scenes.join("\n")}`;
 }
