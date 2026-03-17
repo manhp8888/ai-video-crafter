@@ -8,33 +8,31 @@ import PremiumBanner from "@/components/PremiumBanner";
 import AdPlaceholder from "@/components/AdPlaceholder";
 import AISettings from "@/components/AISettings";
 import { useToast } from "@/hooks/use-toast";
-
-export interface PromptData {
-  idea: string;
-  style: string;
-  camera: string;
-  lighting: string;
-  mood: string;
-  model: string;
-  duration: string;
-}
-
-function generatePrompt(data: PromptData) {
-  const style = data.style || "Cinematic";
-  const camera = data.camera || "Slow Zoom";
-  const lighting = data.lighting || "Soft Lighting";
-  const mood = data.mood || "Epic";
-  const model = data.model || "Runway";
-  const duration = data.duration || "10 giây";
-  const idea = data.idea.trim() || "một khung cảnh thiên nhiên ngoạn mục";
-
-  return `[${model} Prompt] Video ${duration} phong cách ${style.toLowerCase()} về ${idea}. Quay bằng ${camera.toLowerCase()}, ${lighting.toLowerCase()}, tạo bầu không khí ${mood.toLowerCase()}. Chất lượng cao, độ phân giải 4K, chỉnh màu điện ảnh, bố cục chuyên nghiệp. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${duration}`;
-}
+import { generatePrompt, getRandomIdea, type PromptData } from "@/lib/prompt";
 
 async function generateAIPrompt(data: PromptData, apiKey: string, aiModel: string): Promise<string> {
-  const systemPrompt = `Bạn là chuyên gia tạo prompt cho các công cụ tạo video AI (Runway, Pika, Sora, Kling). Hãy tạo prompt chi tiết, chuyên nghiệp bằng tiếng Anh dựa trên thông tin người dùng cung cấp. Prompt phải mô tả cảnh quay điện ảnh, bao gồm chi tiết về ánh sáng, góc quay, chuyển động, bầu không khí, và kỹ thuật hậu kỳ. Chỉ trả về prompt, không giải thích thêm.`;
+  const systemPrompt = `Bạn là chuyên gia content video ngắn & prompt engineering cho các công cụ AI video (Runway, Pika, Sora, Kling).
+Nhiệm vụ: tạo một gói nội dung đầy đủ gồm:
+1) Tiêu đề
+2) Hashtag
+3) Mô tả video chuẩn SEO
+4) Prompt tạo ảnh bìa
+5) Prompt tổng để tạo video
+6) Prompt theo từng cảnh (scene breakdown)
 
-  const userPrompt = `Tạo prompt video AI với các thông số sau:
+Yêu cầu định dạng:
+- Trả về đúng định dạng Markdown với các heading sau:
+## Tiêu đề
+## Hashtag
+## Mô tả video chuẩn SEO
+## Prompt tạo ảnh bìa
+## Prompt tổng
+## Prompt theo cảnh
+- Không thêm lời giải thích ngoài các mục trên.`;
+
+  const userPrompt = `Thông tin người dùng:
+- Ngôn ngữ đầu vào: ${data.inputLanguage || "Tiếng Việt"}
+- Ngôn ngữ đầu ra: ${data.outputLanguage || "Tiếng Việt"}
 - Ý tưởng: ${data.idea || "một khung cảnh thiên nhiên ngoạn mục"}
 - Phong cách: ${data.style || "Cinematic"}
 - Chuyển động máy quay: ${data.camera || "Slow Zoom"}
@@ -43,7 +41,7 @@ async function generateAIPrompt(data: PromptData, apiKey: string, aiModel: strin
 - Thời lượng: ${data.duration || "10 giây"}
 - Mô hình video: ${data.model || "Runway"}
 
-Hãy tạo prompt chi tiết, chuyên nghiệp cho ${data.model || "Runway"}.`;
+Hãy tạo nội dung theo ngôn ngữ đầu ra đã chọn.`;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -57,7 +55,7 @@ Hãy tạo prompt chi tiết, chuyên nghiệp cho ${data.model || "Runway"}.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      max_tokens: 500,
+      max_tokens: 900,
       temperature: 0.8,
     }),
   });
@@ -68,20 +66,46 @@ Hãy tạo prompt chi tiết, chuyên nghiệp cho ${data.model || "Runway"}.`;
   }
 
   const result = await response.json();
-  return `[${data.model || "Runway"} Prompt] ${result.choices[0].message.content}`;
+  return result.choices[0].message.content;
 }
 
 const Index = () => {
   const [formData, setFormData] = useState<PromptData>({
-    idea: "", style: "", camera: "", lighting: "", mood: "", model: "", duration: "",
+    idea: "",
+    style: "",
+    camera: "",
+    lighting: "",
+    mood: "",
+    model: "",
+    duration: "",
+    inputLanguage: "Tiếng Việt",
+    outputLanguage: "Tiếng Việt",
   });
   const [prompt, setPrompt] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem("prompt_history");
+    if (!saved) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiApiKey, setAiApiKey] = useState(() => localStorage.getItem("openai_api_key") || "");
   const [aiModel, setAiModel] = useState(() => localStorage.getItem("openai_model") || "gpt-4o");
   const [useAI, setUseAI] = useState(() => localStorage.getItem("use_ai") === "true");
   const { toast } = useToast();
+
+  const pushToHistory = (newPrompt: string) => {
+    const updated = [newPrompt, ...history].slice(0, 10);
+    setHistory(updated);
+    localStorage.setItem("prompt_history", JSON.stringify(updated));
+  };
 
   const handleGenerate = async () => {
     if (useAI && aiApiKey) {
@@ -89,7 +113,7 @@ const Index = () => {
       try {
         const result = await generateAIPrompt(formData, aiApiKey, aiModel);
         setPrompt(result);
-        setHistory((prev) => [result, ...prev].slice(0, 10));
+        pushToHistory(result);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Lỗi không xác định";
         toast({ title: "Lỗi AI", description: msg, variant: "destructive" });
@@ -99,12 +123,21 @@ const Index = () => {
     } else {
       const result = generatePrompt(formData);
       setPrompt(result);
-      setHistory((prev) => [result, ...prev].slice(0, 10));
+      pushToHistory(result);
     }
   };
 
   const handleTemplateSelect = (template: PromptData) => {
     setFormData(template);
+  };
+
+  const handleRandomIdea = () => {
+    setFormData((prev) => ({ ...prev, idea: getRandomIdea() }));
+  };
+
+  const handleClearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem("prompt_history");
   };
 
   const handleAISettingsChange = (key: string, model: string, enabled: boolean) => {
@@ -123,7 +156,7 @@ const Index = () => {
           <Sparkles className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">Trình Tạo Prompt Video AI</h1>
         </div>
-        <p className="text-muted-foreground text-sm">Tạo prompt điện ảnh cho Runway, Pika, Sora & Kling</p>
+        <p className="text-muted-foreground text-sm">Đa ngôn ngữ đầu vào/đầu ra, gợi ý SEO + cảnh quay cho Runway, Pika, Sora & Kling</p>
       </div>
 
       <PremiumBanner />
@@ -132,7 +165,14 @@ const Index = () => {
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         <div className="space-y-6">
           <PromptTemplates onSelect={handleTemplateSelect} />
-          <PromptForm data={formData} onChange={setFormData} onGenerate={handleGenerate} isGenerating={isGenerating} useAI={useAI && !!aiApiKey} />
+          <PromptForm
+            data={formData}
+            onChange={setFormData}
+            onGenerate={handleGenerate}
+            onRandomIdea={handleRandomIdea}
+            isGenerating={isGenerating}
+            useAI={useAI && !!aiApiKey}
+          />
           {prompt && <PromptOutput prompt={prompt} />}
         </div>
 
@@ -143,7 +183,7 @@ const Index = () => {
             useAI={useAI}
             onChange={handleAISettingsChange}
           />
-          <PromptHistory history={history} onSelect={setPrompt} />
+          <PromptHistory history={history} onSelect={setPrompt} onClear={handleClearHistory} />
           <AdPlaceholder position="sidebar" />
         </div>
       </div>
