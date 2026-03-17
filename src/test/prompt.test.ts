@@ -1,5 +1,9 @@
+import { buildSceneLines, calculateSceneCount, generatePrompt, getRandomIdea, parseDurationSeconds, upsertSceneSection } from "@/lib/prompt";
 import { describe, expect, it } from "vitest";
-import { generatePrompt, getRandomIdea } from "@/lib/prompt";
+
+function countScenes(output: string) {
+  return output.split("\n").filter((line) => line.startsWith("Cảnh ") || line.startsWith("Scene ")).length;
+}
 
 describe("generatePrompt", () => {
   it("returns structured output sections", () => {
@@ -40,11 +44,84 @@ describe("generatePrompt", () => {
     expect(result).toContain("#AIVideo");
     expect(result).toContain("[Sora Prompt");
   });
+
+  it("calculates scene count from duration with ceil(duration/8)", () => {
+    expect(calculateSceneCount("15 giây")).toBe(2);
+    expect(calculateSceneCount("30 giây")).toBe(4);
+    expect(calculateSceneCount("60 giây")).toBe(8);
+    expect(calculateSceneCount("90 giây")).toBe(12);
+  });
+
+  it("builds scene lines matching computed scene count", () => {
+    const lines = buildSceneLines({
+      idea: "review sản phẩm",
+      style: "Realistic",
+      camera: "Handheld",
+      lighting: "Studio Lighting",
+      mood: "Emotional",
+      model: "Sora",
+      duration: "90 giây",
+      inputLanguage: "Tiếng Việt",
+      outputLanguage: "Tiếng Việt",
+    });
+
+    expect(lines).toHaveLength(12);
+    expect(lines[0]).toContain("Cảnh 1");
+    expect(lines[11]).toContain("Cảnh 12");
+    expect(lines[11]).toContain("90s");
+  });
+
+  it("includes same number of scenes in generated output", () => {
+    const result = generatePrompt({
+      idea: "test",
+      style: "Cinematic",
+      camera: "Slow Zoom",
+      lighting: "Soft Lighting",
+      mood: "Epic",
+      model: "Runway",
+      duration: "90 giây",
+      inputLanguage: "Tiếng Việt",
+      outputLanguage: "Tiếng Việt",
+    });
+
+    expect(countScenes(result)).toBe(12);
+  });
+});
+
+describe("parseDurationSeconds", () => {
+  it("extracts integer duration from label", () => {
+    expect(parseDurationSeconds("90 giây")).toBe(90);
+    expect(parseDurationSeconds("60 seconds")).toBe(60);
+    expect(parseDurationSeconds("")).toBe(10);
+  });
 });
 
 describe("getRandomIdea", () => {
   it("returns a non-empty suggestion", () => {
     const idea = getRandomIdea();
     expect(idea.length).toBeGreaterThan(10);
+  });
+});
+
+
+describe("upsertSceneSection", () => {
+  it("replaces existing AI scene section with computed scene count", () => {
+    const aiOutput = `## Tiêu đề\nTest\n\n## Prompt theo cảnh\nCảnh 1 (0-10s): ...\nCảnh 2 (10-20s): ...\nCảnh 3 (20-30s): ...\nCảnh 4 (30-40s): ...\nCảnh 5 (40-50s): ...`;
+
+    const normalized = upsertSceneSection(aiOutput, {
+      idea: "test",
+      style: "Cinematic",
+      camera: "Slow Zoom",
+      lighting: "Soft Lighting",
+      mood: "Epic",
+      model: "Runway",
+      duration: "90 giây",
+      inputLanguage: "Tiếng Việt",
+      outputLanguage: "Tiếng Việt",
+    });
+
+    expect(countScenes(normalized)).toBe(12);
+    expect(normalized).toContain("Cảnh 12");
+    expect(normalized).not.toContain("Cảnh 5 (40-50s)");
   });
 });
