@@ -8,7 +8,7 @@ import PremiumBanner from "@/components/PremiumBanner";
 import AdPlaceholder from "@/components/AdPlaceholder";
 import AISettings from "@/components/AISettings";
 import { useToast } from "@/hooks/use-toast";
-import { generatePrompt, getRandomIdea, type PromptData } from "@/lib/prompt";
+import { buildSceneLines, calculateSceneCount, generatePrompt, getRandomIdea, parseDurationSeconds, type PromptData } from "@/lib/prompt";
 
 async function generateAIPrompt(data: PromptData, apiKey: string, aiModel: string): Promise<string> {
   const systemPrompt = `Bạn là chuyên gia content video ngắn & prompt engineering cho các công cụ AI video (Runway, Pika, Sora, Kling).
@@ -30,6 +30,10 @@ Yêu cầu định dạng:
 ## Prompt theo cảnh
 - Không thêm lời giải thích ngoài các mục trên.`;
 
+  const durationValue = data.duration || "10 giây";
+  const durationSeconds = parseDurationSeconds(durationValue);
+  const sceneCount = calculateSceneCount(durationValue);
+
   const userPrompt = `Thông tin người dùng:
 - Ngôn ngữ đầu vào: ${data.inputLanguage || "Tiếng Việt"}
 - Ngôn ngữ đầu ra: ${data.outputLanguage || "Tiếng Việt"}
@@ -38,10 +42,18 @@ Yêu cầu định dạng:
 - Chuyển động máy quay: ${data.camera || "Slow Zoom"}
 - Ánh sáng: ${data.lighting || "Soft Lighting"}
 - Tâm trạng: ${data.mood || "Epic"}
-- Thời lượng: ${data.duration || "10 giây"}
+- Thời lượng: ${durationValue}
 - Mô hình video: ${data.model || "Runway"}
 
-Hãy tạo nội dung theo ngôn ngữ đầu ra đã chọn.`;
+Hãy tạo nội dung theo ngôn ngữ đầu ra đã chọn.
+BẮT BUỘC tạo đúng ${sceneCount} cảnh cho video ${durationSeconds} giây (không hơn, không kém).
+Generate ${sceneCount} scenes for a ${durationSeconds} second video.
+Each scene should include:
+- scene number
+- time range
+- camera movement
+- description
+Make sure the total scene timing equals the selected duration.`;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -66,7 +78,19 @@ Hãy tạo nội dung theo ngôn ngữ đầu ra đã chọn.`;
   }
 
   const result = await response.json();
-  return result.choices[0].message.content;
+  return enforceSceneSection(result.choices[0].message.content || "", data);
+}
+
+
+function enforceSceneSection(content: string, data: PromptData) {
+  const scenes = buildSceneLines(data).join("\n");
+  const sceneHeading = "## Prompt theo cảnh";
+
+  if (!content.includes(sceneHeading)) {
+    return `${content.trim()}\n\n${sceneHeading}\n${scenes}`;
+  }
+
+  return content.replace(/## Prompt theo cảnh[\s\S]*/m, `${sceneHeading}\n${scenes}`);
 }
 
 const Index = () => {
