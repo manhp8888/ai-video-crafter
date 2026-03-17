@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2, Bot } from "lucide-react";
 import type { PromptData } from "@/pages/Index";
 
 const dropdowns = [
@@ -9,6 +9,7 @@ const dropdowns = [
   { label: "Chuyển động máy quay", key: "camera" as const, placeholder: "Chọn chuyển động", options: ["Static Shot", "Slow Zoom", "Drone Shot", "Tracking Shot", "Handheld", "Cinematic Pan"] },
   { label: "Ánh sáng", key: "lighting" as const, placeholder: "Chọn ánh sáng", options: ["Soft Lighting", "Neon Lighting", "Sunset Lighting", "Studio Lighting", "Dramatic Lighting"] },
   { label: "Tâm trạng", key: "mood" as const, placeholder: "Chọn tâm trạng", options: ["Epic", "Dark", "Dreamy", "Emotional", "Futuristic"] },
+  { label: "Thời lượng video", key: "duration" as const, placeholder: "Chọn thời lượng", options: ["5 giây", "10 giây", "15 giây", "20 giây", "30 giây"] },
   { label: "Mô hình Video", key: "model" as const, placeholder: "Chọn mô hình", options: ["Runway", "Pika", "Sora", "Kling"] },
 ];
 
@@ -16,9 +17,11 @@ interface PromptFormProps {
   data: PromptData;
   onChange: (data: PromptData) => void;
   onGenerate: () => void;
+  isGenerating?: boolean;
+  useAI?: boolean;
 }
 
-const PromptForm = ({ data, onChange, onGenerate }: PromptFormProps) => {
+const PromptForm = ({ data, onChange, onGenerate, isGenerating, useAI }: PromptFormProps) => {
   const updateField = (key: keyof PromptData, value: string) => {
     onChange({ ...data, [key]: value });
   };
@@ -55,9 +58,15 @@ const PromptForm = ({ data, onChange, onGenerate }: PromptFormProps) => {
         ))}
       </div>
 
-      <Button onClick={onGenerate} className="w-full h-11 rounded-xl text-sm font-semibold">
-        <Sparkles className="w-4 h-4 mr-2" />
-        Tạo Prompt
+      <Button onClick={onGenerate} disabled={isGenerating} className="w-full h-11 rounded-xl text-sm font-semibold">
+        {isGenerating ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : useAI ? (
+          <Bot className="w-4 h-4 mr-2" />
+        ) : (
+          <Sparkles className="w-4 h-4 mr-2" />
+        )}
+        {isGenerating ? "Đang tạo với AI..." : useAI ? "Tạo Prompt bằng AI" : "Tạo Prompt"}
       </Button>
     </div>
   );
