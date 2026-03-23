@@ -7,11 +7,13 @@ import PromptHistory from "@/components/PromptHistory";
 import PremiumBanner from "@/components/PremiumBanner";
 import AdPlaceholder from "@/components/AdPlaceholder";
 import AISettings from "@/components/AISettings";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { calculateSceneCount, generatePrompt, getRandomIdea, parseDurationSeconds, upsertSceneSection, type PromptData } from "@/lib/prompt";
 
-async function generateAIPrompt(data: PromptData, apiKey: string, aiModel: string): Promise<string> {
-  const systemPrompt = `Bạn là chuyên gia content video ngắn & prompt engineering cho các công cụ AI video (Runway, Pika, Sora, Kling).
+async function generateAIPrompt(data: PromptData, apiKey: string, aiModel: string, aiProvider: string): Promise<string> {
+  const systemPrompt = `Bạn là chuyên gia content video ngắn & prompt engineering cho các công cụ AI video.
 Nhiệm vụ: tạo một gói nội dung đầy đủ gồm:
 1) Tiêu đề
 2) Hashtag
@@ -46,22 +48,22 @@ Yêu cầu định dạng:
 - Mô hình video: ${data.model || "Runway"}
 
 Hãy tạo nội dung theo ngôn ngữ đầu ra đã chọn.
-BẮT BUỘC tạo đúng ${sceneCount} cảnh cho video ${durationSeconds} giây (không hơn, không kém).
-Generate ${sceneCount} scenes for a ${durationSeconds} second video.
-Each scene should include:
-- scene number
-- time range
-- camera movement
-- description
-Make sure the total scene timing equals the selected duration.`;
+BẮT BUỘC tạo đúng ${sceneCount} cảnh cho video ${durationSeconds} giây.`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
+  let apiUrl: string;
+  let headers: Record<string, string>;
+  let body: Record<string, unknown>;
+
+  if (aiProvider === "gemini") {
+    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
+    headers = { "Content-Type": "application/json" };
+    body = {
+      contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+    };
+  } else {
+    apiUrl = "https://api.openai.com/v1/chat/completions";
+    headers = { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` };
+    body = {
       model: aiModel,
       messages: [
         { role: "system", content: systemPrompt },
@@ -69,8 +71,10 @@ Make sure the total scene timing equals the selected duration.`;
       ],
       max_tokens: 900,
       temperature: 0.8,
-    }),
-  });
+    };
+  }
+
+  const response = await fetch(apiUrl, { method: "POST", headers, body: JSON.stringify(body) });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -78,7 +82,15 @@ Make sure the total scene timing equals the selected duration.`;
   }
 
   const result = await response.json();
-  return upsertSceneSection(result.choices[0].message.content || "", data);
+  let content: string;
+
+  if (aiProvider === "gemini") {
+    content = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } else {
+    content = result.choices?.[0]?.message?.content || "";
+  }
+
+  return upsertSceneSection(content, data);
 }
 
 const Index = () => {
@@ -96,10 +108,7 @@ const Index = () => {
   const [prompt, setPrompt] = useState("");
   const [history, setHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("prompt_history");
-    if (!saved) {
-      return [];
-    }
-
+    if (!saved) return [];
     try {
       const parsed = JSON.parse(saved);
       return Array.isArray(parsed) ? parsed : [];
@@ -108,8 +117,10 @@ const Index = () => {
     }
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiApiKey, setAiApiKey] = useState(() => localStorage.getItem("openai_api_key") || "");
-  const [aiModel, setAiModel] = useState(() => localStorage.getItem("openai_model") || "gpt-4o");
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [aiApiKey, setAiApiKey] = useState(() => localStorage.getItem("ai_api_key") || "");
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem("ai_model") || "gpt-4o");
+  const [aiProvider, setAiProvider] = useState(() => localStorage.getItem("ai_provider") || "openai");
   const [useAI, setUseAI] = useState(() => localStorage.getItem("use_ai") === "true");
   const { toast } = useToast();
 
@@ -123,7 +134,7 @@ const Index = () => {
     if (useAI && aiApiKey) {
       setIsGenerating(true);
       try {
-        const result = await generateAIPrompt(formData, aiApiKey, aiModel);
+        const result = await generateAIPrompt(formData, aiApiKey, aiModel, aiProvider);
         setPrompt(result);
         pushToHistory(result);
       } catch (e: unknown) {
@@ -136,6 +147,51 @@ const Index = () => {
       const result = generatePrompt(formData);
       setPrompt(result);
       pushToHistory(result);
+    }
+  };
+
+  const handleAISuggest = async () => {
+    if (!formData.idea.trim()) return;
+    setIsSuggesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-suggest", {
+        body: { idea: formData.idea },
+      });
+
+      if (error) throw error;
+
+      const s = data?.suggestion;
+      if (s) {
+        setFormData((prev) => ({
+          ...prev,
+          idea: s.enhancedIdea || prev.idea,
+          style: s.style || prev.style,
+          camera: s.camera || prev.camera,
+          lighting: s.lighting || prev.lighting,
+          mood: s.mood || prev.mood,
+          model: s.model || prev.model,
+          duration: s.duration || prev.duration,
+        }));
+
+        // Build preview prompt from suggestion
+        const previewParts = [
+          s.title && `## Tiêu đề\n${s.title}`,
+          s.hashtags && `## Hashtag\n${s.hashtags}`,
+          s.description && `## Mô tả video chuẩn SEO\n${s.description}`,
+          s.coverPrompt && `## Prompt tạo ảnh bìa\n${s.coverPrompt}`,
+        ].filter(Boolean);
+
+        if (previewParts.length > 0) {
+          setPrompt(previewParts.join("\n\n"));
+        }
+
+        toast({ title: "AI đã gợi ý xong!", description: "Tất cả trường đã được điền. Bạn có thể chỉnh sửa trước khi tạo prompt." });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Lỗi không xác định";
+      toast({ title: "Lỗi gợi ý AI", description: msg, variant: "destructive" });
+    } finally {
+      setIsSuggesting(false);
     }
   };
 
@@ -152,24 +208,30 @@ const Index = () => {
     localStorage.removeItem("prompt_history");
   };
 
-  const handleAISettingsChange = (key: string, model: string, enabled: boolean) => {
+  const handleAISettingsChange = (key: string, model: string, enabled: boolean, provider: string) => {
     setAiApiKey(key);
     setAiModel(model);
     setUseAI(enabled);
-    localStorage.setItem("openai_api_key", key);
-    localStorage.setItem("openai_model", model);
+    setAiProvider(provider);
+    localStorage.setItem("ai_api_key", key);
+    localStorage.setItem("ai_model", model);
     localStorage.setItem("use_ai", String(enabled));
+    localStorage.setItem("ai_provider", provider);
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-8 gap-6">
-      <div className="text-center space-y-2">
-        <div className="flex items-center justify-center gap-2">
+      <div className="w-full max-w-4xl flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">Trình Tạo Prompt Video AI</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Trình Tạo Prompt AI</h1>
         </div>
-        <p className="text-muted-foreground text-sm">Đa ngôn ngữ đầu vào/đầu ra, gợi ý SEO + cảnh quay cho Runway, Pika, Sora & Kling</p>
+        <ThemeToggle />
       </div>
+
+      <p className="text-muted-foreground text-sm text-center max-w-2xl">
+        Tạo prompt chuyên nghiệp cho mọi công cụ AI tạo video & hình ảnh — Runway, Pika, Sora, Kling, Hailuo, Jimeng và nhiều hơn nữa
+      </p>
 
       <PremiumBanner />
       <AdPlaceholder position="top" />
@@ -182,7 +244,9 @@ const Index = () => {
             onChange={setFormData}
             onGenerate={handleGenerate}
             onRandomIdea={handleRandomIdea}
+            onAISuggest={handleAISuggest}
             isGenerating={isGenerating}
+            isSuggesting={isSuggesting}
             useAI={useAI && !!aiApiKey}
           />
           {prompt && <PromptOutput prompt={prompt} />}
@@ -193,6 +257,7 @@ const Index = () => {
             apiKey={aiApiKey}
             model={aiModel}
             useAI={useAI}
+            aiProvider={aiProvider}
             onChange={handleAISettingsChange}
           />
           <PromptHistory history={history} onSelect={setPrompt} onClear={handleClearHistory} />

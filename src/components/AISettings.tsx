@@ -8,11 +8,27 @@ interface Props {
   apiKey: string;
   model: string;
   useAI: boolean;
-  onChange: (key: string, model: string, enabled: boolean) => void;
+  aiProvider: string;
+  onChange: (key: string, model: string, enabled: boolean, provider: string) => void;
 }
 
-const AISettings = ({ apiKey, model, useAI, onChange }: Props) => {
+const providerModels: Record<string, { label: string; value: string }[]> = {
+  openai: [
+    { label: "GPT-4o", value: "gpt-4o" },
+    { label: "GPT-4o Mini", value: "gpt-4o-mini" },
+    { label: "GPT-4 Turbo", value: "gpt-4-turbo" },
+  ],
+  gemini: [
+    { label: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
+    { label: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
+    { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
+  ],
+};
+
+const AISettings = ({ apiKey, model, useAI, aiProvider, onChange }: Props) => {
   const [showKey, setShowKey] = useState(false);
+
+  const models = providerModels[aiProvider] || providerModels.openai;
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
@@ -29,19 +45,38 @@ const AISettings = ({ apiKey, model, useAI, onChange }: Props) => {
         </div>
         <Switch
           checked={useAI}
-          onCheckedChange={(checked) => onChange(apiKey, model, checked)}
+          onCheckedChange={(checked) => onChange(apiKey, model, checked, aiProvider)}
         />
+      </div>
+
+      {/* AI Provider */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Nhà cung cấp AI</label>
+        <Select value={aiProvider} onValueChange={(v) => {
+          const defaultModel = providerModels[v]?.[0]?.value || "gpt-4o";
+          onChange(apiKey, defaultModel, useAI, v);
+        }}>
+          <SelectTrigger className="bg-background border-border text-foreground rounded-xl h-9 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="openai" className="text-foreground text-xs">OpenAI</SelectItem>
+            <SelectItem value="gemini" className="text-foreground text-xs">Google Gemini</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* API Key */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">OpenAI API Key</label>
+        <label className="text-xs font-medium text-muted-foreground">
+          {aiProvider === "gemini" ? "Gemini API Key" : "OpenAI API Key"}
+        </label>
         <div className="relative">
           <Input
             type={showKey ? "text" : "password"}
-            placeholder="sk-..."
+            placeholder={aiProvider === "gemini" ? "AIza..." : "sk-..."}
             value={apiKey}
-            onChange={(e) => onChange(e.target.value, model, useAI)}
+            onChange={(e) => onChange(e.target.value, model, useAI, aiProvider)}
             className="bg-background border-border text-foreground rounded-xl h-9 text-xs pr-9"
           />
           <button
@@ -57,14 +92,16 @@ const AISettings = ({ apiKey, model, useAI, onChange }: Props) => {
       {/* Model */}
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground">Mô hình AI</label>
-        <Select value={model} onValueChange={(v) => onChange(apiKey, v, useAI)}>
+        <Select value={model} onValueChange={(v) => onChange(apiKey, v, useAI, aiProvider)}>
           <SelectTrigger className="bg-background border-border text-foreground rounded-xl h-9 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
-            <SelectItem value="gpt-4o" className="text-foreground text-xs focus:bg-accent focus:text-accent-foreground">GPT-4o</SelectItem>
-            <SelectItem value="gpt-4o-mini" className="text-foreground text-xs focus:bg-accent focus:text-accent-foreground">GPT-4o Mini</SelectItem>
-            <SelectItem value="gpt-4-turbo" className="text-foreground text-xs focus:bg-accent focus:text-accent-foreground">GPT-4 Turbo</SelectItem>
+            {models.map((m) => (
+              <SelectItem key={m.value} value={m.value} className="text-foreground text-xs">
+                {m.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
