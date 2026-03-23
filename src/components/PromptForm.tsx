@@ -1,6 +1,3 @@
-
-### `src/components/PromptForm.tsx`
-```tsx
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
