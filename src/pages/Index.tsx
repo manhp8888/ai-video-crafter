@@ -7,7 +7,7 @@ import PromptHistory from "@/components/PromptHistory";
 import PremiumBanner from "@/components/PremiumBanner";
 import AdPlaceholder from "@/components/AdPlaceholder";
 import AISettings from "@/components/AISettings";
-import ThemeToggle from "@/components/ThemeToggle";
+
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateSceneCount, generatePrompt, getRandomIdea, parseDurationSeconds, upsertSceneSection, type PromptData } from "@/lib/prompt";
@@ -220,18 +220,16 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-8 gap-6">
-      <div className="w-full max-w-4xl flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-primary" />
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Trình Tạo Prompt AI</h1>
-        </div>
-        <ThemeToggle />
+    <div className="flex flex-col items-center px-4 py-6 gap-6">
+      <div className="w-full max-w-4xl">
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          Tạo Prompt AI
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Tạo prompt chuyên nghiệp cho mọi công cụ AI tạo video & hình ảnh
+        </p>
       </div>
-
-      <p className="text-muted-foreground text-sm text-center max-w-2xl">
-        Tạo prompt chuyên nghiệp cho mọi công cụ AI tạo video & hình ảnh — Runway, Pika, Sora, Kling, Hailuo, Jimeng và nhiều hơn nữa
-      </p>
 
       <PremiumBanner />
       <AdPlaceholder position="top" />
