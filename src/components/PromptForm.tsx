@@ -87,7 +87,7 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
         ))}
       </div>
 
-      <Button onClick={onGenerate} disabled={isGenerating} className="w-full h-11 rounded-xl text-sm font-semibold">
+      <Button onClick={onGenerate} disabled={isGenerating || disabled} className="w-full h-11 rounded-xl text-sm font-semibold">
         {isGenerating ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
         ) : useAI ? (
