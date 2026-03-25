@@ -36,7 +36,7 @@ interface PromptFormProps {
   disabled?: boolean;
 }
 
-const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isGenerating, isSuggesting, useAI }: PromptFormProps) => {
+const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isGenerating, isSuggesting, useAI, disabled }: PromptFormProps) => {
   const updateField = (key: keyof PromptData, value: string) => {
     onChange({ ...data, [key]: value });
   };
