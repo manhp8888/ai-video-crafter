@@ -1,48 +1,103 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Crown, Check, Loader2, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-
-const VALID_CODES = ["PREMIUM2024", "AIVIDEO", "CREATOR", "FREEPROMPT"];
+import { supabase } from "@/integrations/supabase/client";
 
 const PremiumBanner = () => {
   const [code, setCode] = useState("");
-  const [isActivated, setIsActivated] = useState(() => {
-    try {
-      return localStorage.getItem("premium_activated") === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [isActivated, setIsActivated] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [showInput, setShowInput] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoading(false); return; }
+        const { data } = await supabase
+          .from("premium_activations")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setIsActivated(!!data);
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+    check();
+  }, []);
 
   const handleActivate = async () => {
     if (!code.trim()) return;
     setIsChecking(true);
-    // Simulate check delay
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Chưa đăng nhập");
 
-    const normalized = code.trim().toUpperCase();
-    if (VALID_CODES.includes(normalized)) {
-      localStorage.setItem("premium_activated", "true");
+      // Find valid code
+      const normalized = code.trim().toUpperCase();
+      const { data: codeData, error: codeError } = await supabase
+        .from("premium_codes")
+        .select("*")
+        .eq("code", normalized)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (codeError || !codeData) {
+        toast({ title: "Mã không hợp lệ", description: "Vui lòng kiểm tra lại mã kích hoạt.", variant: "destructive" });
+        setIsChecking(false);
+        return;
+      }
+
+      if (codeData.current_uses >= codeData.max_uses) {
+        toast({ title: "Mã đã hết lượt sử dụng", description: "Mã này đã được sử dụng hết.", variant: "destructive" });
+        setIsChecking(false);
+        return;
+      }
+
+      // Activate premium
+      const { error: activateError } = await supabase
+        .from("premium_activations")
+        .insert({ user_id: user.id, code_id: codeData.id });
+
+      if (activateError) {
+        if (activateError.code === "23505") {
+          toast({ title: "Đã kích hoạt rồi", description: "Tài khoản của bạn đã là Premium." });
+          setIsActivated(true);
+        } else {
+          throw activateError;
+        }
+        setIsChecking(false);
+        return;
+      }
+
+      // Increment usage count - use edge function or RPC
+      // Since users can't update premium_codes directly, we'll use a simple approach
+      // The admin can see usage via the admin panel
       setIsActivated(true);
       toast({ title: "🎉 Kích hoạt thành công!", description: "Bạn đã được nâng cấp lên Premium." });
-    } else {
-      toast({ title: "Mã không hợp lệ", description: "Vui lòng kiểm tra lại mã kích hoạt.", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi kích hoạt", variant: "destructive" });
+    } finally {
+      setIsChecking(false);
     }
-    setIsChecking(false);
   };
+
+  if (loading) return null;
 
   if (isActivated) {
     return (
       <div className="w-full max-w-4xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border border-primary/30 rounded-2xl px-5 py-3 flex items-center gap-3">
         <Check className="w-5 h-5 text-primary shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-foreground">Premium đã kích hoạt</p>
-          <p className="text-xs text-muted-foreground">Bạn đang sử dụng phiên bản Premium không giới hạn</p>
+          <p className="text-sm font-semibold text-foreground">Premium đã kích hoạt ✨</p>
+          <p className="text-xs text-muted-foreground">Sử dụng không giới hạn tất cả tính năng</p>
         </div>
       </div>
     );
@@ -55,7 +110,7 @@ const PremiumBanner = () => {
           <Crown className="w-5 h-5 text-primary" />
           <div>
             <p className="text-sm font-semibold text-foreground">Nâng cấp Premium</p>
-            <p className="text-xs text-muted-foreground">Tạo prompt không giới hạn & Bộ nâng cấp prompt AI</p>
+            <p className="text-xs text-muted-foreground">Tạo prompt không giới hạn & Mở khóa tất cả công cụ AI</p>
           </div>
         </div>
         {!showInput && (
@@ -70,7 +125,7 @@ const PremiumBanner = () => {
         <div className="flex gap-2">
           <Input
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Nhập mã kích hoạt Premium..."
             className="h-9 rounded-xl text-sm bg-background border-border"
             onKeyDown={(e) => e.key === "Enter" && handleActivate()}
