@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Eraser, Loader2, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { UsageLimitBanner, useUsageLimit } from "@/components/UsageLimitBanner";
 
 const RemoveBg = () => {
   const [imagePreview, setImagePreview] = useState("");
   const [resultImage, setResultImage] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { canUse, recordUsage } = useUsageLimit("remove_bg", 2);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -20,6 +22,10 @@ const RemoveBg = () => {
 
   const handleProcess = async () => {
     if (!imagePreview) return;
+    if (!canUse) {
+      toast({ title: "Hết lượt miễn phí", description: "Nâng cấp Premium để tiếp tục", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-image-process", {
