@@ -33,6 +33,7 @@ interface PromptFormProps {
   isGenerating?: boolean;
   isSuggesting?: boolean;
   useAI?: boolean;
+  disabled?: boolean;
 }
 
 const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isGenerating, isSuggesting, useAI }: PromptFormProps) => {
