@@ -34,6 +34,7 @@ const ImageEnhance = () => {
       if (error) throw error;
       if (data?.resultImage) {
         setResultImage(data.resultImage);
+        await recordUsage();
         toast({ title: "Nâng cấp ảnh thành công!" });
       }
     } catch (err: unknown) {
@@ -45,6 +46,7 @@ const ImageEnhance = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <UsageLimitBanner feature="image_enhance" limit={2} label="nâng cấp ảnh" />
       <div>
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <ImageUp className="w-5 h-5 text-primary" /> Nâng cấp ảnh AI
