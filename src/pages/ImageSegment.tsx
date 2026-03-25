@@ -42,6 +42,7 @@ const ImageSegment = () => {
       if (error) throw error;
       if (data?.resultImage) {
         setResultImage(data.resultImage);
+        await recordUsage();
         toast({ title: "Xử lý thành công!" });
       } else {
         throw new Error("Không nhận được kết quả từ AI");
