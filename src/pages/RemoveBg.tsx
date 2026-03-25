@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Eraser, Loader2, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { UsageLimitBanner, useUsageLimit } from "@/components/UsageLimitBanner";
 
 const RemoveBg = () => {
   const [imagePreview, setImagePreview] = useState("");
   const [resultImage, setResultImage] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { canUse, recordUsage } = useUsageLimit("remove_bg", 2);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -20,6 +22,10 @@ const RemoveBg = () => {
 
   const handleProcess = async () => {
     if (!imagePreview) return;
+    if (!canUse) {
+      toast({ title: "Hết lượt miễn phí", description: "Nâng cấp Premium để tiếp tục", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-image-process", {
@@ -28,6 +34,7 @@ const RemoveBg = () => {
       if (error) throw error;
       if (data?.resultImage) {
         setResultImage(data.resultImage);
+        await recordUsage();
         toast({ title: "Xóa nền thành công!" });
       }
     } catch (err: unknown) {
@@ -39,6 +46,7 @@ const RemoveBg = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <UsageLimitBanner feature="remove_bg" limit={2} label="xóa nền" />
       <div>
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Eraser className="w-5 h-5 text-primary" /> Xóa nền ảnh

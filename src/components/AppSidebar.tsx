@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdmin } from "@/hooks/use-admin";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Sparkles, Wand2, Scissors, Eraser, ImageUp, Video, LogOut } from "lucide-react";
+import { Sparkles, Wand2, Scissors, Eraser, ImageUp, Video, LogOut, Shield } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const menuItems = [
@@ -26,6 +27,7 @@ const menuItems = [
 const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAdmin();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -59,6 +61,26 @@ const AppSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Quản trị</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location.pathname === "/admin"}
+                    onClick={() => navigate("/admin")}
+                    tooltip="Admin"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>Admin</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center justify-between px-2">

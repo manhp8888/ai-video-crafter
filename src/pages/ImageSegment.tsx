@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Scissors, Loader2, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { UsageLimitBanner, useUsageLimit } from "@/components/UsageLimitBanner";
 
 const ImageSegment = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -12,6 +13,7 @@ const ImageSegment = () => {
   const [resultImage, setResultImage] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { canUse, recordUsage } = useUsageLimit("image_segment", 2);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,6 +30,10 @@ const ImageSegment = () => {
       toast({ title: "Vui lòng chọn ảnh", variant: "destructive" });
       return;
     }
+    if (!canUse) {
+      toast({ title: "Hết lượt miễn phí", description: "Nâng cấp Premium để tiếp tục", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-image-process", {
@@ -36,6 +42,7 @@ const ImageSegment = () => {
       if (error) throw error;
       if (data?.resultImage) {
         setResultImage(data.resultImage);
+        await recordUsage();
         toast({ title: "Xử lý thành công!" });
       } else {
         throw new Error("Không nhận được kết quả từ AI");
@@ -58,6 +65,7 @@ const ImageSegment = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <UsageLimitBanner feature="image_segment" limit={2} label="tách ảnh" />
       <div>
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Scissors className="w-5 h-5 text-primary" />

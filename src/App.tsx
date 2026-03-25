@@ -13,6 +13,7 @@ import ImageSegment from "./pages/ImageSegment";
 import RemoveBg from "./pages/RemoveBg";
 import ImageEnhance from "./pages/ImageEnhance";
 import AIVideo from "./pages/AIVideo";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => {
                 <Route path="/remove-bg" element={<RemoveBg />} />
                 <Route path="/enhance" element={<ImageEnhance />} />
                 <Route path="/ai-video" element={<AIVideo />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AppLayout>
