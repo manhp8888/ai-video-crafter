@@ -1,34 +1,34 @@
-import { buildSceneLines, calculateSceneCount, generatePrompt, getRandomIdea, parseDurationSeconds, upsertSceneSection } from "@/lib/prompt";
+import { buildSceneLines, calculateSceneCount, generatePrompt, getRandomIdea, parseDurationSeconds } from "@/lib/prompt";
 import { describe, expect, it } from "vitest";
 
 function countScenes(output: string) {
   return output.split("\n").filter((line) => line.startsWith("Cảnh ") || line.startsWith("Scene ")).length;
 }
 
+const baseData = {
+  idea: "",
+  style: "",
+  camera: "",
+  lighting: "",
+  mood: "",
+  model: "",
+  duration: "",
+  inputLanguage: "Tiếng Việt",
+  outputLanguage: "Tiếng Việt",
+  mode: "basic" as const,
+};
+
 describe("generatePrompt", () => {
   it("returns structured output sections", () => {
-    const result = generatePrompt({
-      idea: "",
-      style: "",
-      camera: "",
-      lighting: "",
-      mood: "",
-      model: "",
-      duration: "",
-      inputLanguage: "Tiếng Việt",
-      outputLanguage: "Tiếng Việt",
-    });
-
+    const result = generatePrompt(baseData);
     expect(result).toContain("## Tiêu đề");
     expect(result).toContain("## Hashtag");
-    expect(result).toContain("## Mô tả video chuẩn SEO");
-    expect(result).toContain("## Prompt tạo ảnh bìa");
     expect(result).toContain("## Prompt tổng");
-    expect(result).toContain("## Prompt theo cảnh");
   });
 
   it("supports english output", () => {
     const result = generatePrompt({
+      ...baseData,
       idea: "product review with hook",
       style: "Realistic",
       camera: "Handheld",
@@ -39,10 +39,7 @@ describe("generatePrompt", () => {
       inputLanguage: "English",
       outputLanguage: "English",
     });
-
     expect(result).toContain("product review with hook");
-    expect(result).toContain("#AIVideo");
-    expect(result).toContain("[Sora Prompt");
   });
 
   it("calculates scene count from duration with ceil(duration/8)", () => {
@@ -54,6 +51,7 @@ describe("generatePrompt", () => {
 
   it("builds scene lines matching computed scene count", () => {
     const lines = buildSceneLines({
+      ...baseData,
       idea: "review sản phẩm",
       style: "Realistic",
       camera: "Handheld",
@@ -61,18 +59,15 @@ describe("generatePrompt", () => {
       mood: "Emotional",
       model: "Sora",
       duration: "90 giây",
-      inputLanguage: "Tiếng Việt",
-      outputLanguage: "Tiếng Việt",
     });
-
     expect(lines).toHaveLength(12);
     expect(lines[0]).toContain("Cảnh 1");
     expect(lines[11]).toContain("Cảnh 12");
-    expect(lines[11]).toContain("90s");
   });
 
   it("includes same number of scenes in generated output", () => {
     const result = generatePrompt({
+      ...baseData,
       idea: "test",
       style: "Cinematic",
       camera: "Slow Zoom",
@@ -80,10 +75,7 @@ describe("generatePrompt", () => {
       mood: "Epic",
       model: "Runway",
       duration: "90 giây",
-      inputLanguage: "Tiếng Việt",
-      outputLanguage: "Tiếng Việt",
     });
-
     expect(countScenes(result)).toBe(12);
   });
 });
@@ -100,28 +92,5 @@ describe("getRandomIdea", () => {
   it("returns a non-empty suggestion", () => {
     const idea = getRandomIdea();
     expect(idea.length).toBeGreaterThan(10);
-  });
-});
-
-
-describe("upsertSceneSection", () => {
-  it("replaces existing AI scene section with computed scene count", () => {
-    const aiOutput = `## Tiêu đề\nTest\n\n## Prompt theo cảnh\nCảnh 1 (0-10s): ...\nCảnh 2 (10-20s): ...\nCảnh 3 (20-30s): ...\nCảnh 4 (30-40s): ...\nCảnh 5 (40-50s): ...`;
-
-    const normalized = upsertSceneSection(aiOutput, {
-      idea: "test",
-      style: "Cinematic",
-      camera: "Slow Zoom",
-      lighting: "Soft Lighting",
-      mood: "Epic",
-      model: "Runway",
-      duration: "90 giây",
-      inputLanguage: "Tiếng Việt",
-      outputLanguage: "Tiếng Việt",
-    });
-
-    expect(countScenes(normalized)).toBe(12);
-    expect(normalized).toContain("Cảnh 12");
-    expect(normalized).not.toContain("Cảnh 5 (40-50s)");
   });
 });

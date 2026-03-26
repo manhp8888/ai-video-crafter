@@ -118,7 +118,7 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
         {allDropdowns.map((d) => (
           <div key={d.key} className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">{d.label}</label>
-            <Select value={(data as Record<string, string>)[d.key] || ""} onValueChange={(v) => updateField(d.key, v)}>
+            <Select value={(data as unknown as Record<string, string>)[d.key] || ""} onValueChange={(v) => updateField(d.key, v)}>
               <SelectTrigger className="bg-background border-border text-foreground rounded-xl h-10">
                 <SelectValue placeholder={d.placeholder} />
               </SelectTrigger>
