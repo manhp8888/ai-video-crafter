@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
-import type { GeneratedPrompt } from "@/hooks/use-prompt-generator";
+import { Copy, Check, ChevronDown, ChevronUp, Zap, Shuffle, Download } from "lucide-react";
+import type { GeneratedPrompt } from "@/lib/prompt";
 
 interface Props {
   prompt: string;
   structured?: GeneratedPrompt | null;
+  onEnhance?: () => void;
+  onRemix?: () => void;
+  isEnhancing?: boolean;
+  isPremium?: boolean;
 }
 
-const sections = [
-  { key: "title", label: "Tiêu đề", icon: "🎬" },
-  { key: "hashtags", label: "Hashtag", icon: "#️⃣" },
-  { key: "seoDescription", label: "Mô tả SEO", icon: "📝" },
-  { key: "coverPrompt", label: "Prompt ảnh bìa", icon: "🖼️" },
-  { key: "masterPrompt", label: "Prompt tổng", icon: "🎯" },
-] as const;
-
-function CopyButton({ text, label }: { text: string; label?: string }) {
+function CopyBtn({ text, label }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -24,19 +20,30 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <Button
-      onClick={handleCopy}
-      variant="ghost"
-      size="sm"
-      className="h-7 text-xs shrink-0"
-    >
+    <Button onClick={handleCopy} variant="ghost" size="sm" className="h-7 text-xs shrink-0">
       {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
       {copied ? "Đã chép" : label || "Sao chép"}
     </Button>
   );
 }
 
-const PromptOutput = ({ prompt, structured }: Props) => {
+function OutputBlock({ icon, label, content, children }: { icon: string; label: string; content?: string; children?: React.ReactNode }) {
+  if (!content && !children) return null;
+  return (
+    <div className="bg-background border border-border rounded-xl p-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+          <span>{icon}</span> {label}
+        </span>
+        {content && <CopyBtn text={content} />}
+      </div>
+      {content && <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{content}</p>}
+      {children}
+    </div>
+  );
+}
+
+const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isPremium }: Props) => {
   const [expandedScenes, setExpandedScenes] = useState(true);
   const [copiedAll, setCopiedAll] = useState(false);
 
@@ -46,104 +53,141 @@ const PromptOutput = ({ prompt, structured }: Props) => {
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
+  const handleExportJSON = () => {
+    if (!structured) return;
+    const blob = new Blob([JSON.stringify(structured, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `prompt-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (structured) {
+    const hashtagsStr = Array.isArray(structured.hashtags) ? structured.hashtags.join(" ") : (structured.hashtags || "");
+    const cameraInfo = structured.camera_settings
+      ? `${structured.camera_settings.lens} · ${structured.camera_settings.angle} · ${structured.camera_settings.motion} · ${structured.camera_settings.fps}`
+      : "";
+    const lightingInfo = structured.lighting_settings
+      ? `${structured.lighting_settings.type} · ${structured.lighting_settings.time_of_day} · ${structured.lighting_settings.color_temperature}`
+      : "";
+
     return (
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-foreground">Prompt đã tạo</span>
-          <Button
-            onClick={handleCopyAll}
-            variant={copiedAll ? "default" : "secondary"}
-            size="sm"
-            className="h-8 text-xs rounded-lg"
-          >
-            {copiedAll ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-            {copiedAll ? "Đã sao chép!" : "Sao chép tất cả"}
-          </Button>
+        {/* Header with actions */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="text-sm font-semibold text-foreground">🎬 Kết quả Prompt Cinematic</span>
+          <div className="flex gap-2">
+            {onEnhance && (
+              <Button onClick={onEnhance} variant="outline" size="sm" className="h-8 text-xs" disabled={isEnhancing}>
+                <Zap className="w-3.5 h-3.5 mr-1" />
+                Nâng cấp
+              </Button>
+            )}
+            {onRemix && (
+              <Button onClick={onRemix} variant="outline" size="sm" className="h-8 text-xs" disabled={isEnhancing}>
+                <Shuffle className="w-3.5 h-3.5 mr-1" />
+                Remix
+              </Button>
+            )}
+            {isPremium && (
+              <Button onClick={handleExportJSON} variant="outline" size="sm" className="h-8 text-xs">
+                <Download className="w-3.5 h-3.5 mr-1" />
+                JSON
+              </Button>
+            )}
+            <Button onClick={handleCopyAll} variant={copiedAll ? "default" : "secondary"} size="sm" className="h-8 text-xs">
+              {copiedAll ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+              {copiedAll ? "Đã chép!" : "Chép tất cả"}
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-3">
-          {sections.map(({ key, label, icon }) => {
-            const value = structured[key];
-            if (!value) return null;
-            return (
-              <div key={key} className="bg-background border border-border rounded-xl p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <span>{icon}</span> {label}
-                  </span>
-                  <CopyButton text={value} />
+          <OutputBlock icon="🎬" label="Tiêu đề" content={structured.title} />
+          <OutputBlock icon="🎯" label="Master Prompt" content={structured.master_prompt} />
+
+          {/* Camera & Lighting specs */}
+          {(cameraInfo || lightingInfo) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {cameraInfo && (
+                <div className="bg-background border border-border rounded-xl p-3">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">📷 Camera</span>
+                  <p className="text-xs text-foreground">{cameraInfo}</p>
                 </div>
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{value}</p>
-              </div>
-            );
-          })}
+              )}
+              {lightingInfo && (
+                <div className="bg-background border border-border rounded-xl p-3">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">💡 Ánh sáng</span>
+                  <p className="text-xs text-foreground">{lightingInfo}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Scenes */}
           {structured.scenes && structured.scenes.length > 0 && (
             <div className="bg-background border border-border rounded-xl p-3">
-              <button
-                onClick={() => setExpandedScenes(!expandedScenes)}
-                className="flex items-center justify-between w-full mb-1.5"
-              >
+              <button onClick={() => setExpandedScenes(!expandedScenes)} className="flex items-center justify-between w-full mb-1.5">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <span>🎞️</span> Prompt theo cảnh ({structured.scenes.length} cảnh)
+                  🎞️ Cảnh quay ({structured.scenes.length} cảnh)
                 </span>
-                {expandedScenes ? (
-                  <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
+                {expandedScenes ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
               </button>
               {expandedScenes && (
                 <div className="space-y-2 mt-2">
                   {structured.scenes.map((scene) => (
-                    <div
-                      key={scene.id}
-                      className="bg-card border border-border rounded-lg p-2.5 flex items-start justify-between gap-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold text-primary">
-                            Cảnh {scene.id}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {scene.timeRange}
-                          </span>
-                          <span className="text-xs text-muted-foreground/70">
-                            · {scene.camera}
-                          </span>
-                        </div>
-                        <p className="text-xs text-foreground/80 leading-relaxed">
-                          {scene.description}
-                        </p>
+                    <div key={scene.scene} className="bg-card border border-border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-primary">Cảnh {scene.scene}</span>
+                        <CopyBtn text={`${scene.camera}\n${scene.lighting}\n${scene.motion}\n${scene.description}`} />
                       </div>
-                      <CopyButton
-                        text={`Cảnh ${scene.id} (${scene.timeRange}): ${scene.camera} — ${scene.description}`}
-                      />
+                      <p className="text-xs text-foreground/90 leading-relaxed mb-2">{scene.description}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="inline-flex items-center text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">📷 {scene.camera}</span>
+                        <span className="inline-flex items-center text-[10px] bg-accent text-accent-foreground px-2 py-0.5 rounded-full">💡 {scene.lighting}</span>
+                        <span className="inline-flex items-center text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">🎬 {scene.motion}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           )}
+
+          <OutputBlock icon="🖼️" label="Prompt ảnh bìa" content={structured.thumbnail_prompt} />
+          <OutputBlock icon="📝" label="Mô tả SEO" content={structured.description} />
+          <OutputBlock icon="#️⃣" label="Hashtag" content={hashtagsStr} />
         </div>
       </div>
     );
   }
 
-  // Fallback: raw text
+  // Fallback: raw text with enhance/remix
   return (
     <div className="bg-card rounded-2xl border border-border p-5 space-y-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
-      <span className="text-sm font-semibold text-foreground">Prompt đã tạo</span>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-sm font-semibold text-foreground">Prompt đã tạo</span>
+        <div className="flex gap-2">
+          {onEnhance && (
+            <Button onClick={onEnhance} variant="outline" size="sm" className="h-8 text-xs" disabled={isEnhancing}>
+              <Zap className="w-3.5 h-3.5 mr-1" />
+              Nâng cấp
+            </Button>
+          )}
+          {onRemix && (
+            <Button onClick={onRemix} variant="outline" size="sm" className="h-8 text-xs" disabled={isEnhancing}>
+              <Shuffle className="w-3.5 h-3.5 mr-1" />
+              Remix
+            </Button>
+          )}
+        </div>
+      </div>
       <div className="bg-background border border-border rounded-xl p-4">
         <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">{prompt}</p>
       </div>
-      <Button
-        onClick={handleCopyAll}
-        variant={copiedAll ? "default" : "secondary"}
-        className="w-full h-10 rounded-xl text-sm font-medium"
-      >
+      <Button onClick={handleCopyAll} variant={copiedAll ? "default" : "secondary"} className="w-full h-10 rounded-xl text-sm font-medium">
         {copiedAll ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
         {copiedAll ? "Đã sao chép!" : "Sao chép Prompt"}
       </Button>

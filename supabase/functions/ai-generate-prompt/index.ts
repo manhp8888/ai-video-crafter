@@ -5,136 +5,94 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MODEL_PROMPT_GUIDES: Record<string, string> = {
-  "Runway": `Tối ưu cho Runway Gen-3/Gen-4:
-- Mô tả chuyển động camera rõ ràng (ví dụ: "camera slowly pushes in", "steady tracking shot")
-- Dùng ngôn ngữ tự nhiên, mô tả từng chi tiết hình ảnh theo thứ tự: chủ thể → hành động → bối cảnh → ánh sáng → mood
-- Thêm "cinematic quality, 4K, shallow depth of field" cho chất lượng cao
-- Mỗi prompt nên tập trung vào MỘT hành động/chuyển động chính`,
-
-  "Pika": `Tối ưu cho Pika:
-- Giữ prompt ngắn gọn, tập trung vào hành động chính
-- Bắt đầu bằng mô tả chủ thể, sau đó mô tả chuyển động
-- Dùng keywords: "smooth motion", "high quality", "detailed"
-- Tránh prompt quá dài, Pika hoạt động tốt nhất với 1-2 câu mô tả`,
-
-  "Sora": `Tối ưu cho Sora:
-- Viết prompt như kịch bản phim: mô tả cảnh, nhân vật, hành động chi tiết
-- Sora hiểu ngữ cảnh phức tạp - có thể mô tả nhiều đối tượng tương tác
-- Thêm chi tiết về vật liệu, texture, ánh sáng tự nhiên
-- Dùng ngôn ngữ điện ảnh: "wide establishing shot", "close-up", "over-the-shoulder"`,
-
-  "Kling": `Tối ưu cho Kling AI:
-- Mô tả chi tiết nhân vật: ngoại hình, trang phục, biểu cảm
-- Kling mạnh về chuyển động người - tận dụng mô tả cử chỉ, hành động cơ thể
-- Thêm "realistic skin texture, natural hair movement, fabric physics"
-- Dùng prompt song ngữ (Anh-Trung) để tối ưu kết quả`,
-
-  "Luma Dream Machine": `Tối ưu cho Luma Dream Machine:
-- Tập trung vào mô tả 3D và chiều sâu không gian
-- Dùng "photorealistic, volumetric lighting, ray tracing quality"
-- Mô tả camera movement rõ: "orbit around", "fly through", "dolly in"
-- Luma mạnh về cảnh thiên nhiên và kiến trúc - tận dụng chi tiết môi trường`,
-
-  "Hailuo AI": `Tối ưu cho Hailuo AI (MiniMax):
-- Hỗ trợ prompt tiếng Trung tốt nhất, nên thêm bản dịch Trung
-- Mô tả chuyển động mượt mà, tự nhiên
-- Dùng "电影质感, 高清画质, 自然光线" cho chất lượng cao
-- Tập trung vào narrative flow giữa các cảnh`,
-
-  "Midjourney": `Tối ưu cho Midjourney (ảnh tĩnh/concept):
-- Dùng tham số: --ar 16:9 --v 6.1 --style raw --q 2
-- Cấu trúc: [chủ thể], [hành động], [bối cảnh], [phong cách], [kỹ thuật]
-- Thêm từ khóa chất lượng: "8K UHD, hyper-detailed, masterpiece"
-- Dùng "cinematic still frame" để tạo ảnh tĩnh giống frame phim`,
-
-  "DALL-E 3": `Tối ưu cho DALL-E 3:
-- Viết prompt dạng paragraph mô tả tự nhiên, chi tiết
-- DALL-E 3 hiểu ngữ cảnh tốt - mô tả cảm xúc, câu chuyện
-- Thêm chi tiết về composition: "rule of thirds", "golden ratio"
-- Dùng "photorealistic photograph" hoặc "digital art illustration" để định hướng style`,
+const MODEL_GUIDES: Record<string, string> = {
+  "Runway": "Optimize for Runway Gen-3/Gen-4: describe camera movement explicitly ('camera slowly pushes in'), use natural language scene-by-scene. Add 'cinematic quality, 4K, shallow depth of field'.",
+  "Pika": "Optimize for Pika: keep prompts concise, focus on main action. Start with subject, then motion. Use 'smooth motion, high quality'. 1-2 sentences per scene.",
+  "Sora": "Optimize for Sora: write like a film script with detailed scene, character, action descriptions. Sora understands complex context. Use cinematic language: 'wide establishing shot', 'close-up', 'over-the-shoulder'.",
+  "Kling": "Optimize for Kling AI: detail character appearance, clothing, expression. Kling excels at human motion—describe gestures, body movement. Add 'realistic skin texture, natural hair movement, fabric physics'.",
+  "Luma Dream Machine": "Optimize for Luma: focus on 3D depth, spatial description. Use 'photorealistic, volumetric lighting, ray tracing'. Describe camera: 'orbit around', 'fly through', 'dolly in'.",
+  "Hailuo AI": "Optimize for Hailuo (MiniMax): supports Chinese prompts well. Describe smooth, natural motion. Add '电影质感, 高清画质, 自然光线'.",
+  "Midjourney": "Optimize for Midjourney: use params --ar 16:9 --v 6.1 --style raw --q 2. Structure: [subject], [action], [environment], [style], [technique]. Add '8K UHD, hyper-detailed, masterpiece'.",
+  "DALL-E 3": "Optimize for DALL-E 3: write natural paragraph descriptions. Detail emotion, story. Add composition: 'rule of thirds', 'golden ratio'.",
 };
-
-function getModelGuide(model: string): string {
-  return MODEL_PROMPT_GUIDES[model] || MODEL_PROMPT_GUIDES["Runway"];
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { idea, style, camera, lighting, mood, model, duration, inputLanguage, outputLanguage } = await req.json();
+    const body = await req.json();
+    const { idea, style, camera, lighting, mood, model, duration, inputLanguage, outputLanguage, mode, cameraAngle, cameraLens, cameraMotion, lightingType, timeOfDay, colorTemperature, realism } = body;
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const durationValue = duration || "10 giây";
     const durationMatch = durationValue.match(/\d+/);
     const durationSeconds = durationMatch ? Number(durationMatch[0]) : 10;
-    const sceneCount = Math.ceil(durationSeconds / 8);
+    const sceneCount = Math.max(2, Math.ceil(durationSeconds / 5));
     const outLang = outputLanguage || "Tiếng Việt";
     const modelName = model || "Runway";
-    const modelGuide = getModelGuide(modelName);
+    const promptMode = mode || "basic";
+    const modelGuide = MODEL_GUIDES[modelName] || MODEL_GUIDES["Runway"];
 
-    const systemPrompt = `Bạn là chuyên gia hàng đầu về AI video production, cinematography, và prompt engineering.
-Bạn có kiến thức sâu về cách các công cụ AI video hoạt động và cách viết prompt để tạo ra video chân thật, chất lượng cao nhất.
+    const advancedContext = promptMode !== "basic" ? `
+ADVANCED CINEMATOGRAPHY REQUIREMENTS:
+- Camera Angle: ${cameraAngle || "eye level"} 
+- Lens: ${cameraLens || "50mm"} (specify exact focal length, aperture f-stop)
+- Camera Motion: ${cameraMotion || "tracking"} (specify speed: slow/medium/fast, smoothness)
+- Lighting Type: ${lightingType || "soft"} 
+- Time of Day: ${timeOfDay || "golden hour"}
+- Color Temperature: ${colorTemperature || "5600K daylight"}
+- Realism Level: ${realism || "photorealistic"}
 
-NGUYÊN TẮC VÀNG khi viết prompt video AI:
-1. **Cụ thể hóa mọi chi tiết**: Không dùng từ chung chung. Thay "đẹp" bằng mô tả cụ thể (ánh sáng golden hour chiếu xiên 45°, tạo bóng mềm trên khuôn mặt)
-2. **Mô tả vật lý thực tế**: Bao gồm texture bề mặt, phản xạ ánh sáng, chuyển động vật lý tự nhiên (tóc bay theo gió, vải rủ theo trọng lực, nước bắn tung tóe)
-3. **Kỹ thuật cinematography chuyên nghiệp**: Dùng thuật ngữ điện ảnh chính xác (focal length, depth of field, color grading LUT, aspect ratio)
-4. **Liên kết cảnh mượt mà**: Mỗi cảnh phải có transition logic, không nhảy đột ngột
-5. **Emotion-driven**: Mỗi cảnh phải truyền tải cảm xúc cụ thể qua ánh sáng, góc máy, và nhịp độ
+PRO PHYSICS & REALISM RULES:
+1. Hair: describe strand-level movement, reaction to wind/gravity
+2. Fabric: material type (silk/cotton/leather), drape physics, wrinkle patterns
+3. Skin: subsurface scattering, pore-level detail, natural imperfections
+4. Water: caustics, refraction, surface tension, splash dynamics
+5. Light: bounce, volumetric rays, lens flare type, chromatic aberration
+6. Atmosphere: particle density (dust/fog/rain), depth haze, air perspective
+7. Motion blur: shutter angle specification (180° standard, 90° for staccato)` : "";
+
+    const systemPrompt = `You are an elite AI video production specialist and prompt engineer. You create PRODUCTION-READY prompts that generate ultra-realistic, cinematic AI videos.
 
 ${modelGuide}
 
-TECHNICAL SPECS cho prompt chất lượng:
-- Luôn chỉ định: resolution (4K/8K), frame rate (24fps cinematic / 60fps smooth), color space
-- Mô tả depth of field: shallow (f/1.4-2.8) cho portrait, deep (f/8-16) cho landscape
-- Chỉ định lens type: wide (14-24mm), standard (35-50mm), telephoto (85-200mm)
-- Ánh sáng: key light direction, fill ratio, color temperature (3200K warm / 5600K daylight / 6500K cool)
+CORE PRINCIPLES:
+1. SPECIFICITY: Never use vague words. Replace "beautiful" with exact details (golden hour light at 45° angle, soft shadows on face contours)
+2. REALISTIC PHYSICS: Include surface textures, light reflections, natural movement (hair swaying in wind, fabric draping with gravity, water splash dynamics)
+3. PROFESSIONAL CINEMATOGRAPHY: Use precise film terminology (focal length, depth of field f/1.4-2.8, color grading LUT, aspect ratio)
+4. SMOOTH TRANSITIONS: Each scene must have logical flow, no jarring cuts
+5. EMOTION-DRIVEN: Every scene conveys specific emotion through lighting, angle, and pacing
+${advancedContext}
 
-Trả về JSON với format sau (KHÔNG markdown, KHÔNG giải thích thêm):
-{
-  "title": "tiêu đề video hấp dẫn, cuốn hút click",
-  "hashtags": "8-12 hashtag trending phù hợp nền tảng TikTok/Reels/YouTube Shorts",
-  "seoDescription": "mô tả video chuẩn SEO 3-4 câu, chứa từ khóa chính, kêu gọi xem",
-  "coverPrompt": "prompt chi tiết tạo thumbnail/ảnh bìa 4K với composition rule of thirds, high contrast, readable text area",
-  "masterPrompt": "prompt tổng hợp đầy đủ thông số kỹ thuật: style, camera, lighting setup, color grading, mood, atmosphere, physics, texture. Prompt phải đủ chi tiết để paste trực tiếp vào tool AI và tạo ra video chất lượng cao",
-  "scenes": [
-    {
-      "id": 1,
-      "timeRange": "0-5s",
-      "camera": "mô tả chi tiết: lens, movement, speed, angle",
-      "description": "mô tả cảnh cực kỳ chi tiết: chủ thể, hành động, bối cảnh, ánh sáng, texture, atmosphere, particle effects, sound design suggestion"
-    }
-  ]
-}
+TECHNICAL SPECS:
+- Resolution: 4K/8K, frame rate (24fps cinematic / 60fps smooth)
+- Depth of field: shallow (f/1.4-2.8) for portrait, deep (f/8-16) for landscape
+- Lens type: wide (14-24mm), standard (35-50mm), telephoto (85-200mm)
+- Light: key light direction, fill ratio, color temperature (3200K warm / 5600K daylight / 6500K cool)
+- The master_prompt MUST be directly paste-able into ${modelName} with zero editing needed
 
-Lưu ý:
-- Tạo đúng ${sceneCount} cảnh cho video ${durationSeconds} giây
-- Tổng thời lượng các cảnh phải bằng ${durationSeconds} giây
-- Viết bằng ${outLang}
-- masterPrompt phải có thể copy paste trực tiếp vào ${modelName} và tạo video ngay
-- Mỗi scene description phải >= 2 câu, mô tả đủ chi tiết để AI hiểu chính xác cần render gì
-- Camera movement phải ghi rõ lens focal length, tốc độ di chuyển, hướng
-- Kết hợp tags kỹ thuật: --style, --mood, --duration, --quality, --fps trong masterPrompt`;
+Generate exactly ${sceneCount} scenes for a ${durationSeconds}-second video.
+Output language: ${outLang}
+Mode: ${promptMode}`;
 
-    const userPrompt = `Tạo bộ prompt video AI CHẤT LƯỢNG CAO với thông tin sau:
-- Ý tưởng: ${idea || "một khung cảnh thiên nhiên ngoạn mục"}
-- Phong cách: ${style || "Cinematic"}
-- Máy quay: ${camera || "Slow Zoom"}
-- Ánh sáng: ${lighting || "Soft Lighting"}
-- Tâm trạng/Mood: ${mood || "Epic"}
-- Thời lượng: ${durationValue}
-- Mô hình AI: ${modelName}
-- Ngôn ngữ đầu vào: ${inputLanguage || "Tiếng Việt"}
-- Ngôn ngữ đầu ra: ${outLang}
+    const userPrompt = `Create a PRODUCTION-READY cinematic video prompt:
+- Idea: ${idea || "a breathtaking natural landscape"}
+- Style: ${style || "Cinematic"}
+- Camera: ${camera || "Slow Zoom"}
+- Lighting: ${lighting || "Soft Lighting"}  
+- Mood: ${mood || "Epic"}
+- Duration: ${durationValue}
+- AI Model: ${modelName}
+- Input Language: ${inputLanguage || "Tiếng Việt"}
+- Output Language: ${outLang}
 
-YÊU CẦU ĐẶC BIỆT:
-1. masterPrompt phải viết theo đúng format mà ${modelName} hiểu tốt nhất
-2. Mỗi scene phải có chi tiết về: ánh sáng cụ thể, texture bề mặt, chuyển động vật lý, atmosphere
-3. Cover prompt phải tạo ra thumbnail thu hút click, high contrast, có focal point rõ ràng
-4. SEO description phải chứa từ khóa trending và kêu gọi hành động`;
+REQUIREMENTS:
+1. master_prompt must follow ${modelName}'s optimal format
+2. Each scene needs: specific lighting, surface texture, physics movement, atmosphere
+3. thumbnail_prompt must create click-worthy 4K thumbnail with rule-of-thirds, high contrast
+4. Include realistic human motion if people are in scene (micro-expressions, weight shifting, breathing)`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -148,42 +106,62 @@ YÊU CẦU ĐẶC BIỆT:
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_video_prompt",
-              description: "Generate a complete, high-quality video prompt package optimized for AI video tools",
-              parameters: {
-                type: "object",
-                properties: {
-                  title: { type: "string", description: "Catchy, click-worthy video title" },
-                  hashtags: { type: "string", description: "8-12 trending hashtags" },
-                  seoDescription: { type: "string", description: "SEO-optimized video description 3-4 sentences" },
-                  coverPrompt: { type: "string", description: "Detailed 4K thumbnail/cover prompt with composition details" },
-                  masterPrompt: { type: "string", description: "Complete master prompt with all technical specs, ready to paste into AI tool" },
-                  scenes: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        id: { type: "number" },
-                        timeRange: { type: "string" },
-                        camera: { type: "string", description: "Detailed camera info: lens, movement, speed, angle" },
-                        description: { type: "string", description: "Extremely detailed scene description: subject, action, environment, lighting, texture, atmosphere" },
-                      },
-                      required: ["id", "timeRange", "camera", "description"],
-                      additionalProperties: false,
+        tools: [{
+          type: "function",
+          function: {
+            name: "generate_cinematic_prompt",
+            description: "Generate a complete production-ready cinematic video prompt package",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Catchy, click-worthy video title" },
+                description: { type: "string", description: "SEO-optimized video description 3-4 sentences with keywords" },
+                hashtags: { type: "array", items: { type: "string" }, description: "8-12 trending hashtags" },
+                thumbnail_prompt: { type: "string", description: "Detailed 4K thumbnail prompt with composition, lighting, focal point" },
+                master_prompt: { type: "string", description: "Complete master prompt with ALL technical specs, ready to paste into AI tool" },
+                camera_settings: {
+                  type: "object",
+                  properties: {
+                    angle: { type: "string" },
+                    lens: { type: "string" },
+                    fps: { type: "string" },
+                    motion: { type: "string" },
+                  },
+                  required: ["angle", "lens", "fps", "motion"],
+                  additionalProperties: false,
+                },
+                lighting_settings: {
+                  type: "object",
+                  properties: {
+                    type: { type: "string" },
+                    time_of_day: { type: "string" },
+                    color_temperature: { type: "string" },
+                  },
+                  required: ["type", "time_of_day", "color_temperature"],
+                  additionalProperties: false,
+                },
+                scenes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      scene: { type: "number" },
+                      description: { type: "string", description: "Ultra-detailed scene: subject, action, environment, textures, particles, physics" },
+                      camera: { type: "string", description: "Lens focal length, movement speed, direction, angle" },
+                      lighting: { type: "string", description: "Specific lighting setup for this scene" },
+                      motion: { type: "string", description: "Subject movement, physics, particle effects" },
                     },
+                    required: ["scene", "description", "camera", "lighting", "motion"],
+                    additionalProperties: false,
                   },
                 },
-                required: ["title", "hashtags", "seoDescription", "coverPrompt", "masterPrompt", "scenes"],
-                additionalProperties: false,
               },
+              required: ["title", "description", "hashtags", "thumbnail_prompt", "master_prompt", "camera_settings", "lighting_settings", "scenes"],
+              additionalProperties: false,
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_video_prompt" } },
+        }],
+        tool_choice: { type: "function", function: { name: "generate_cinematic_prompt" } },
       }),
     });
 
