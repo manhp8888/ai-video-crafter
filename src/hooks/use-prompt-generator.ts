@@ -1,16 +1,7 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { generatePrompt, getRandomIdea, type PromptData } from "@/lib/prompt";
-
-export interface GeneratedPrompt {
-  title: string;
-  hashtags: string;
-  seoDescription: string;
-  coverPrompt: string;
-  masterPrompt: string;
-  scenes: { id: number; timeRange: string; camera: string; description: string }[];
-}
+import { generatePrompt, getRandomIdea, type PromptData, type GeneratedPrompt, type PromptMode } from "@/lib/prompt";
 
 const INITIAL_FORM: PromptData = {
   idea: "",
@@ -22,24 +13,8 @@ const INITIAL_FORM: PromptData = {
   duration: "",
   inputLanguage: "Tiếng Việt",
   outputLanguage: "Tiếng Việt",
+  mode: "basic",
 };
-
-function parseMarkdownToStructured(markdown: string): GeneratedPrompt | null {
-  const section = (heading: string) => {
-    const regex = new RegExp(`##\\s*${heading}\\s*\\n([\\s\\S]*?)(?=\\n##|$)`, "i");
-    return regex.exec(markdown)?.[1]?.trim() || "";
-  };
-  const title = section("Tiêu đề");
-  if (!title) return null;
-  return {
-    title,
-    hashtags: section("Hashtag"),
-    seoDescription: section("Mô tả video chuẩn SEO"),
-    coverPrompt: section("Prompt tạo ảnh bìa"),
-    masterPrompt: section("Prompt tổng"),
-    scenes: [],
-  };
-}
 
 export function usePromptGenerator() {
   const [formData, setFormData] = useState<PromptData>(INITIAL_FORM);
@@ -55,12 +30,13 @@ export function usePromptGenerator() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const { toast } = useToast();
 
   const pushToHistory = useCallback((text: string) => {
     setHistory((prev) => {
-      const updated = [text, ...prev].slice(0, 10);
+      const updated = [text, ...prev].slice(0, 20);
       localStorage.setItem("prompt_history", JSON.stringify(updated));
       return updated;
     });
@@ -68,9 +44,10 @@ export function usePromptGenerator() {
 
   const formatPromptText = (p: GeneratedPrompt): string => {
     const scenesText = p.scenes
-      .map((s) => `Cảnh ${s.id} (${s.timeRange}): ${s.camera} — ${s.description}`)
-      .join("\n");
-    return `## Tiêu đề\n${p.title}\n\n## Hashtag\n${p.hashtags}\n\n## Mô tả video chuẩn SEO\n${p.seoDescription}\n\n## Prompt tạo ảnh bìa\n${p.coverPrompt}\n\n## Prompt tổng\n${p.masterPrompt}\n\n## Prompt theo cảnh\n${scenesText}`;
+      .map((s) => `Cảnh ${s.scene}: ${s.camera} | ${s.lighting} | ${s.motion}\n${s.description}`)
+      .join("\n\n");
+    const hashtagsStr = Array.isArray(p.hashtags) ? p.hashtags.join(" ") : p.hashtags;
+    return `## Tiêu đề\n${p.title}\n\n## Hashtag\n${hashtagsStr}\n\n## Mô tả SEO\n${p.description}\n\n## Prompt ảnh bìa\n${p.thumbnail_prompt}\n\n## Camera\n${p.camera_settings.lens} | ${p.camera_settings.angle} | ${p.camera_settings.motion} | ${p.camera_settings.fps}\n\n## Ánh sáng\n${p.lighting_settings.type} | ${p.lighting_settings.time_of_day} | ${p.lighting_settings.color_temperature}\n\n## Master Prompt\n${p.master_prompt}\n\n## Cảnh\n${scenesText}`;
   };
 
   const handleGenerate = useCallback(async () => {
@@ -87,15 +64,13 @@ export function usePromptGenerator() {
           const text = formatPromptText(p);
           setRawPrompt(text);
           pushToHistory(text);
-          toast({ title: "Tạo prompt thành công!", description: "AI đã tạo prompt chuyên nghiệp cho bạn." });
+          toast({ title: "Tạo prompt thành công!", description: "AI đã tạo prompt cinematic chuyên nghiệp." });
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Lỗi không xác định";
         toast({ title: "Lỗi AI", description: msg, variant: "destructive" });
-        // Fallback to local generation
         const result = generatePrompt(formData);
-        const parsed = parseMarkdownToStructured(result);
-        setGeneratedPrompt(parsed);
+        setGeneratedPrompt(null);
         setRawPrompt(result);
         pushToHistory(result);
       } finally {
@@ -103,8 +78,7 @@ export function usePromptGenerator() {
       }
     } else {
       const result = generatePrompt(formData);
-      const parsed = parseMarkdownToStructured(result);
-      setGeneratedPrompt(parsed);
+      setGeneratedPrompt(null);
       setRawPrompt(result);
       pushToHistory(result);
     }
@@ -130,7 +104,7 @@ export function usePromptGenerator() {
           model: s.model || prev.model,
           duration: s.duration || prev.duration,
         }));
-        toast({ title: "AI đã gợi ý xong!", description: "Tất cả trường đã được điền. Nhấn 'Tạo Prompt' để hoàn thành." });
+        toast({ title: "AI đã gợi ý xong!", description: "Tất cả trường đã được điền." });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Lỗi không xác định";
@@ -139,6 +113,48 @@ export function usePromptGenerator() {
       setIsSuggesting(false);
     }
   }, [formData.idea, toast]);
+
+  const handleEnhance = useCallback(async () => {
+    if (!rawPrompt) return;
+    setIsEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-enhance-prompt", {
+        body: { prompt: rawPrompt, action: "enhance" },
+      });
+      if (error) throw error;
+      if (data?.enhanced_prompt) {
+        setRawPrompt(data.enhanced_prompt);
+        setGeneratedPrompt(null);
+        pushToHistory(data.enhanced_prompt);
+        toast({ title: "Đã nâng cấp prompt!", description: data.changes_summary || "Prompt đã được tối ưu cinematic." });
+      }
+    } catch (e: unknown) {
+      toast({ title: "Lỗi enhance", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
+    } finally {
+      setIsEnhancing(false);
+    }
+  }, [rawPrompt, pushToHistory, toast]);
+
+  const handleRemix = useCallback(async () => {
+    if (!rawPrompt) return;
+    setIsEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-enhance-prompt", {
+        body: { prompt: rawPrompt, action: "remix" },
+      });
+      if (error) throw error;
+      if (data?.enhanced_prompt) {
+        setRawPrompt(data.enhanced_prompt);
+        setGeneratedPrompt(null);
+        pushToHistory(data.enhanced_prompt);
+        toast({ title: "Đã remix prompt!", description: data.changes_summary || "Prompt mới với phong cách khác." });
+      }
+    } catch (e: unknown) {
+      toast({ title: "Lỗi remix", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
+    } finally {
+      setIsEnhancing(false);
+    }
+  }, [rawPrompt, pushToHistory, toast]);
 
   const handleRandomIdea = useCallback(() => {
     setFormData((prev) => ({ ...prev, idea: getRandomIdea() }));
@@ -150,8 +166,7 @@ export function usePromptGenerator() {
 
   const handleHistorySelect = useCallback((text: string) => {
     setRawPrompt(text);
-    const parsed = parseMarkdownToStructured(text);
-    setGeneratedPrompt(parsed);
+    setGeneratedPrompt(null);
   }, []);
 
   const handleClearHistory = useCallback(() => {
@@ -167,10 +182,13 @@ export function usePromptGenerator() {
     history,
     isGenerating,
     isSuggesting,
+    isEnhancing,
     useAI,
     setUseAI,
     handleGenerate,
     handleAISuggest,
+    handleEnhance,
+    handleRemix,
     handleRandomIdea,
     handleTemplateSelect,
     handleHistorySelect,

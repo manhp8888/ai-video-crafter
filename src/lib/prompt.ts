@@ -1,3 +1,5 @@
+export type PromptMode = "basic" | "advanced" | "pro";
+
 export interface PromptData {
   idea: string;
   style: string;
@@ -8,39 +10,57 @@ export interface PromptData {
   duration: string;
   inputLanguage: string;
   outputLanguage: string;
+  mode: PromptMode;
+  // Advanced/Pro fields
+  cameraAngle?: string;
+  cameraLens?: string;
+  cameraMotion?: string;
+  lightingType?: string;
+  timeOfDay?: string;
+  colorTemperature?: string;
+  realism?: string;
+}
+
+export interface GeneratedPrompt {
+  title: string;
+  description: string;
+  hashtags: string[];
+  thumbnail_prompt: string;
+  master_prompt: string;
+  camera_settings: {
+    angle: string;
+    lens: string;
+    fps: string;
+    motion: string;
+  };
+  lighting_settings: {
+    type: string;
+    time_of_day: string;
+    color_temperature: string;
+  };
+  scenes: {
+    scene: number;
+    description: string;
+    camera: string;
+    lighting: string;
+    motion: string;
+  }[];
 }
 
 function translateLabel(value: string, lang: string) {
-  if (lang === "English") {
-    return value;
-  }
-
+  if (lang === "English") return value;
   const mapping: Record<string, string> = {
-    Cinematic: "Điện ảnh",
-    Anime: "Anime",
-    Realistic: "Chân thực",
-    Cyberpunk: "Cyberpunk",
-    Fantasy: "Giả tưởng",
-    Documentary: "Tài liệu",
-    "Pixar Style": "Phong cách Pixar",
-    "Static Shot": "Cảnh tĩnh",
-    "Slow Zoom": "Zoom chậm",
-    "Drone Shot": "Cảnh drone",
-    "Tracking Shot": "Cảnh bám theo",
-    Handheld: "Cầm tay",
-    "Cinematic Pan": "Quay lia điện ảnh",
-    "Soft Lighting": "Ánh sáng mềm",
-    "Neon Lighting": "Ánh sáng neon",
-    "Sunset Lighting": "Ánh sáng hoàng hôn",
-    "Studio Lighting": "Ánh sáng studio",
-    "Dramatic Lighting": "Ánh sáng kịch tính",
-    Epic: "Hùng tráng",
-    Dark: "Tối bí ẩn",
-    Dreamy: "Mơ màng",
-    Emotional: "Cảm xúc",
-    Futuristic: "Tương lai",
+    Cinematic: "Điện ảnh", Anime: "Anime", Realistic: "Chân thực",
+    Cyberpunk: "Cyberpunk", Fantasy: "Giả tưởng", Documentary: "Tài liệu",
+    "Pixar Style": "Phong cách Pixar", "Static Shot": "Cảnh tĩnh",
+    "Slow Zoom": "Zoom chậm", "Drone Shot": "Cảnh drone",
+    "Tracking Shot": "Cảnh bám theo", Handheld: "Cầm tay",
+    "Cinematic Pan": "Quay lia điện ảnh", "Soft Lighting": "Ánh sáng mềm",
+    "Neon Lighting": "Ánh sáng neon", "Sunset Lighting": "Ánh sáng hoàng hôn",
+    "Studio Lighting": "Ánh sáng studio", "Dramatic Lighting": "Ánh sáng kịch tính",
+    Epic: "Hùng tráng", Dark: "Tối bí ẩn", Dreamy: "Mơ màng",
+    Emotional: "Cảm xúc", Futuristic: "Tương lai",
   };
-
   return mapping[value] || value;
 }
 
@@ -55,13 +75,11 @@ export function calculateSceneCount(duration: string) {
 
 function buildSceneRanges(durationSeconds: number, sceneCount: number) {
   const ranges: Array<{ start: number; end: number }> = [];
-
   for (let i = 0; i < sceneCount; i += 1) {
     const start = Math.floor((i * durationSeconds) / sceneCount);
     const end = i === sceneCount - 1 ? durationSeconds : Math.floor(((i + 1) * durationSeconds) / sceneCount);
     ranges.push({ start, end });
   }
-
   return ranges;
 }
 
@@ -72,11 +90,9 @@ export function buildSceneLines(data: PromptData) {
   const duration = data.duration || "10 giây";
   const idea = data.idea.trim() || "một khung cảnh thiên nhiên ngoạn mục";
   const outputLanguage = data.outputLanguage || "Tiếng Việt";
-
   const sceneCount = calculateSceneCount(duration);
   const durationSeconds = parseDurationSeconds(duration);
   const ranges = buildSceneRanges(durationSeconds, sceneCount);
-
   const cameraOut = translateLabel(camera, outputLanguage);
   const styleOut = translateLabel(style, outputLanguage);
   const moodOut = translateLabel(mood, outputLanguage);
@@ -85,24 +101,8 @@ export function buildSceneLines(data: PromptData) {
     if (outputLanguage === "English") {
       return `Scene ${index + 1} (${range.start}-${range.end}s): Camera ${camera.toLowerCase()}, ${style.toLowerCase()} visual of ${idea}, keep ${mood.toLowerCase()} tone.`;
     }
-
     return `Cảnh ${index + 1} (${range.start}-${range.end}s): Máy quay ${cameraOut.toLowerCase()}, khung hình ${styleOut.toLowerCase()} về ${idea}, giữ cảm xúc ${moodOut.toLowerCase()}.`;
   });
-}
-
-
-function stripExistingSceneSection(content: string) {
-  return content
-    .replace(/\n?##\s*Prompt theo cảnh[\s\S]*/i, "")
-    .replace(/\n?##\s*Scene(?:s|\s+Breakdown)?[\s\S]*/i, "")
-    .trim();
-}
-
-export function upsertSceneSection(content: string, data: PromptData) {
-  const cleaned = stripExistingSceneSection(content);
-  const sceneHeading = data.outputLanguage === "English" ? "## Scenes" : "## Prompt theo cảnh";
-  const scenes = buildSceneLines(data).join("\n");
-  return `${cleaned}\n\n${sceneHeading}\n${scenes}`.trim();
 }
 
 export function generatePrompt(data: PromptData) {
@@ -117,37 +117,18 @@ export function generatePrompt(data: PromptData) {
   const idea = data.idea.trim() || "một khung cảnh thiên nhiên ngoạn mục";
   const durationSeconds = parseDurationSeconds(duration);
   const sceneCount = calculateSceneCount(duration);
-
   const styleOut = translateLabel(style, outputLanguage);
   const cameraOut = translateLabel(camera, outputLanguage);
   const lightingOut = translateLabel(lighting, outputLanguage);
   const moodOut = translateLabel(mood, outputLanguage);
 
-  const title =
-    outputLanguage === "English"
-      ? `${style} ${durationSeconds}s AI Video: ${idea}`
-      : `${styleOut} ${duration}: ${idea}`;
-
-  const hashtags =
-    outputLanguage === "English"
-      ? "#AIVideo #VideoPrompt #ContentCreation #TikTokCreator #RunwayML"
-      : "#AIVideo #PromptVideo #SangTaoNoiDung #TikTokCreator #Runway";
-
-  const description =
-    outputLanguage === "English"
-      ? `Create a ${durationSeconds}-second ${style.toLowerCase()} video about ${idea}. Camera: ${camera.toLowerCase()}, lighting: ${lighting.toLowerCase()}, mood: ${mood.toLowerCase()}. Optimized for TikTok/Reels/Shorts with engaging pacing and a clear visual hook.`
-      : `Tạo video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Máy quay: ${cameraOut.toLowerCase()}, ánh sáng: ${lightingOut.toLowerCase()}, cảm xúc: ${moodOut.toLowerCase()}. Tối ưu cho TikTok/Reels/Shorts với nhịp dựng cuốn hút và hook mạnh ngay 3 giây đầu.`;
-
-  const coverPrompt =
-    outputLanguage === "English"
-      ? `High-contrast thumbnail, ${idea}, bold subject in center, ${lighting.toLowerCase()}, clean composition, cinematic color grading, readable title area, 4K.`
-      : `Ảnh bìa tương phản cao, chủ thể chính là ${idea}, bố cục trung tâm, ${lightingOut.toLowerCase()}, màu điện ảnh, chừa vùng chữ rõ ràng, chất lượng 4K.`;
-
-  const masterPrompt =
-    outputLanguage === "English"
-      ? `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] ${durationSeconds}-second ${style.toLowerCase()} video about ${idea}. Shot with ${camera.toLowerCase()}, ${lighting.toLowerCase()}, mood ${mood.toLowerCase()}, high detail, 4K, cinematic grading, pro composition. Generate ${sceneCount} scenes for a ${durationSeconds} second video. Each scene should include: scene number, time range, camera movement, description. Make sure the total scene timing equals ${durationSeconds} seconds. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${durationSeconds}s`
-      : `[${model} Prompt | Input: ${inputLanguage} | Output: ${outputLanguage}] Video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Quay bằng ${cameraOut.toLowerCase()}, ${lightingOut.toLowerCase()}, cảm xúc ${moodOut.toLowerCase()}, chi tiết cao, 4K, màu điện ảnh, bố cục chuyên nghiệp. Tạo ${sceneCount} cảnh cho video ${durationSeconds} giây. Mỗi cảnh gồm: số cảnh, khoảng thời gian, chuyển động máy quay, mô tả. Đảm bảo tổng thời lượng các cảnh đúng bằng ${durationSeconds} giây. --style ${style.toLowerCase().replace(/\s/g, "_")} --mood ${mood.toLowerCase()} --duration ${durationSeconds}s`;
-
+  const title = outputLanguage === "English"
+    ? `${style} ${durationSeconds}s AI Video: ${idea}`
+    : `${styleOut} ${duration}: ${idea}`;
+  const hashtags = "#AIVideo #PromptVideo #SangTaoNoiDung #TikTokCreator #Runway";
+  const description = `Tạo video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Máy quay: ${cameraOut.toLowerCase()}, ánh sáng: ${lightingOut.toLowerCase()}, cảm xúc: ${moodOut.toLowerCase()}.`;
+  const coverPrompt = `Ảnh bìa tương phản cao, chủ thể chính là ${idea}, bố cục trung tâm, ${lightingOut.toLowerCase()}, màu điện ảnh, chất lượng 4K.`;
+  const masterPrompt = `[${model} Prompt] Video ${duration} phong cách ${styleOut.toLowerCase()} về ${idea}. Quay bằng ${cameraOut.toLowerCase()}, ${lightingOut.toLowerCase()}, cảm xúc ${moodOut.toLowerCase()}, chi tiết cao, 4K.`;
   const scenes = buildSceneLines(data);
 
   return `## Tiêu đề\n${title}\n\n## Hashtag\n${hashtags}\n\n## Mô tả video chuẩn SEO\n${description}\n\n## Prompt tạo ảnh bìa\n${coverPrompt}\n\n## Prompt tổng\n${masterPrompt}\n\n## Prompt theo cảnh\n${scenes.join("\n")}`;
@@ -160,6 +141,8 @@ const IDEA_SUGGESTIONS = [
   "Quán cà phê nhỏ bên bờ biển trong cơn gió chiều vàng cam",
   "Khung cảnh thành phố cổ châu Âu vào mùa lễ hội ánh sáng",
   "Một creator review mỹ phẩm dưới ánh đèn studio kiểu TikTok",
+  "Cô gái bước đi trên con phố Hà Nội buổi sáng sớm, ánh nắng xuyên qua hàng cây",
+  "Drone bay lướt trên ruộng bậc thang Sapa phủ sương mù",
 ];
 
 export function getRandomIdea() {
