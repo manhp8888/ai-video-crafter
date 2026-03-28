@@ -40,7 +40,6 @@ const PremiumBanner = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Chưa đăng nhập");
 
-      // Find valid code
       const normalized = code.trim().toUpperCase();
       const { data: codeData, error: codeError } = await supabase
         .from("premium_codes")
@@ -61,7 +60,6 @@ const PremiumBanner = () => {
         return;
       }
 
-      // Activate premium
       const { error: activateError } = await supabase
         .from("premium_activations")
         .insert({ user_id: user.id, code_id: codeData.id });
@@ -77,9 +75,6 @@ const PremiumBanner = () => {
         return;
       }
 
-      // Increment usage count - use edge function or RPC
-      // Since users can't update premium_codes directly, we'll use a simple approach
-      // The admin can see usage via the admin panel
       setIsActivated(true);
       toast({ title: "🎉 Kích hoạt thành công!", description: "Bạn đã được nâng cấp lên Premium." });
     } catch (e) {
@@ -93,10 +88,12 @@ const PremiumBanner = () => {
 
   if (isActivated) {
     return (
-      <div className="w-full max-w-4xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border border-primary/30 rounded-2xl px-5 py-3 flex items-center gap-3">
-        <Check className="w-5 h-5 text-primary shrink-0" />
+      <div className="w-full max-w-5xl glass-card rounded-2xl px-5 py-4 flex items-center gap-3 border-primary/30">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-[hsl(280,80%,55%)] flex items-center justify-center shrink-0">
+          <Crown className="w-5 h-5 text-primary-foreground" />
+        </div>
         <div>
-          <p className="text-sm font-semibold text-foreground">Premium đã kích hoạt ✨</p>
+          <p className="text-sm font-bold text-foreground">Premium đã kích hoạt ✨</p>
           <p className="text-xs text-muted-foreground">Sử dụng không giới hạn tất cả tính năng</p>
         </div>
       </div>
@@ -104,17 +101,19 @@ const PremiumBanner = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border border-primary/30 rounded-2xl px-5 py-3 space-y-3">
+    <div className="w-full max-w-5xl glass-card rounded-2xl px-5 py-4 space-y-3 border-primary/20">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Crown className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-[hsl(280,80%,55%)]/20 flex items-center justify-center shrink-0">
+            <Crown className="w-5 h-5 text-primary" />
+          </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Nâng cấp Premium</p>
+            <p className="text-sm font-bold text-foreground">Nâng cấp Premium</p>
             <p className="text-xs text-muted-foreground">Tạo prompt không giới hạn & Mở khóa tất cả công cụ AI</p>
           </div>
         </div>
         {!showInput && (
-          <Button size="sm" className="rounded-xl text-xs font-semibold shrink-0" onClick={() => setShowInput(true)}>
+          <Button size="sm" className="rounded-xl text-xs font-bold shrink-0 bg-gradient-to-r from-primary to-[hsl(280,80%,55%)] hover:opacity-90" onClick={() => setShowInput(true)}>
             <KeyRound className="w-3.5 h-3.5 mr-1.5" />
             Nhập mã kích hoạt
           </Button>
@@ -127,12 +126,12 @@ const PremiumBanner = () => {
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Nhập mã kích hoạt Premium..."
-            className="h-9 rounded-xl text-sm bg-background border-border"
+            className="h-10 rounded-xl text-sm bg-background/50 border-border"
             onKeyDown={(e) => e.key === "Enter" && handleActivate()}
           />
           <Button
             size="sm"
-            className="rounded-xl text-xs font-semibold shrink-0 h-9 px-4"
+            className="rounded-xl text-xs font-bold shrink-0 h-10 px-5 bg-gradient-to-r from-primary to-[hsl(280,80%,55%)] hover:opacity-90"
             onClick={handleActivate}
             disabled={isChecking || !code.trim()}
           >

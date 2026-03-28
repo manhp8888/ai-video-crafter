@@ -69,17 +69,17 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
   ];
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
+    <div className="glass-card rounded-2xl p-6 space-y-5">
       {/* Mode Selector */}
-      <div className="flex gap-1 p-1 bg-muted rounded-xl">
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
         {(["basic", "advanced", "pro"] as PromptMode[]).map((m) => (
           <button
             key={m}
             onClick={() => updateField("mode", m)}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
               mode === m
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-gradient-to-r from-primary to-[hsl(280,80%,55%)] text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-card"
             }`}
           >
             {modeLabels[m]}
@@ -91,14 +91,14 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
       {/* Idea textarea */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <label className="text-sm font-medium text-muted-foreground">Ý tưởng Video</label>
+          <label className="text-sm font-semibold text-foreground">Ý tưởng Video</label>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={onRandomIdea}>
+            <Button type="button" variant="ghost" size="sm" className="h-8 text-xs rounded-lg" onClick={onRandomIdea}>
               <Lightbulb className="w-3.5 h-3.5 mr-1" />
               Gợi ý ngẫu nhiên
             </Button>
             {onAISuggest && (
-              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onAISuggest} disabled={isSuggesting || !data.idea.trim()}>
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs rounded-lg" onClick={onAISuggest} disabled={isSuggesting || !data.idea.trim()}>
                 {isSuggesting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 mr-1" />}
                 AI gợi ý toàn bộ
               </Button>
@@ -109,7 +109,7 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
           placeholder="Mô tả ý tưởng video... VD: 'Cô gái bước đi dưới mưa neon ở Tokyo, áo khoác da phản chiếu ánh sáng'"
           value={data.idea}
           onChange={(e) => updateField("idea", e.target.value)}
-          className="min-h-[100px] bg-background border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl resize-none"
+          className="min-h-[100px] bg-background/50 border-border text-foreground placeholder:text-muted-foreground/40 rounded-xl resize-none focus:bg-background transition-colors"
         />
       </div>
 
@@ -117,9 +117,9 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {allDropdowns.map((d) => (
           <div key={d.key} className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">{d.label}</label>
+            <label className="text-xs font-semibold text-muted-foreground">{d.label}</label>
             <Select value={(data as unknown as Record<string, string>)[d.key] || ""} onValueChange={(v) => updateField(d.key, v)}>
-              <SelectTrigger className="bg-background border-border text-foreground rounded-xl h-10">
+              <SelectTrigger className="bg-background/50 border-border text-foreground rounded-xl h-10 focus:bg-background transition-colors">
                 <SelectValue placeholder={d.placeholder} />
               </SelectTrigger>
               <SelectContent className="bg-card border-border max-h-[300px]">
@@ -135,7 +135,11 @@ const PromptForm = ({ data, onChange, onGenerate, onRandomIdea, onAISuggest, isG
       </div>
 
       {/* Generate button */}
-      <Button onClick={onGenerate} disabled={isGenerating || disabled} className="w-full h-11 rounded-xl text-sm font-semibold">
+      <Button
+        onClick={onGenerate}
+        disabled={isGenerating || disabled}
+        className="w-full h-12 rounded-xl text-sm font-bold bg-gradient-to-r from-primary to-[hsl(280,80%,55%)] hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+      >
         {isGenerating ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
         ) : useAI ? (

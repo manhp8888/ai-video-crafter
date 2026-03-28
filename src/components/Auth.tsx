@@ -35,31 +35,36 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-semibold text-foreground">Prompt AI Studio</h1>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[hsl(280,80%,55%)]/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-sm space-y-6 relative z-10">
+        <div className="text-center space-y-3">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary to-[hsl(280,80%,55%)] flex items-center justify-center shadow-lg shadow-primary/20">
+            <Sparkles className="w-7 h-7 text-primary-foreground" />
           </div>
+          <h1 className="text-2xl font-bold text-foreground">Prompt AI Studio</h1>
           <p className="text-sm text-muted-foreground">
             {isLogin ? "Đăng nhập để tiếp tục" : "Tạo tài khoản mới"}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-6 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Email</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</label>
             <Input
               type="email"
               placeholder="email@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="rounded-xl"
+              className="rounded-xl h-11"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Mật khẩu</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mật khẩu</label>
             <Input
               type="password"
               placeholder="••••••••"
@@ -67,10 +72,10 @@ const Auth = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="rounded-xl"
+              className="rounded-xl h-11"
             />
           </div>
-          <Button type="submit" disabled={loading} className="w-full rounded-xl">
+          <Button type="submit" disabled={loading} className="w-full rounded-xl h-11 font-semibold bg-gradient-to-r from-primary to-[hsl(280,80%,55%)] hover:opacity-90 transition-opacity">
             {loading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : isLogin ? (
@@ -82,12 +87,12 @@ const Auth = () => {
           </Button>
         </form>
 
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground">
           {isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?"}{" "}
           <button
             type="button"
             onClick={() => setIsLogin(!isLogin)}
-            className="text-primary hover:underline font-medium"
+            className="text-primary hover:underline font-semibold"
           >
             {isLogin ? "Đăng ký ngay" : "Đăng nhập"}
           </button>
