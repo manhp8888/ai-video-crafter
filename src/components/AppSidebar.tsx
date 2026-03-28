@@ -36,9 +36,11 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Prompt AI Studio</span>
+        <div className="flex items-center gap-2.5 px-2 py-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[hsl(280,80%,55%)] flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="text-sm font-bold text-foreground">Prompt AI Studio</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -83,11 +85,11 @@ const AppSidebar = () => {
         )}
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center justify-between px-2">
+        <div className="flex items-center justify-between px-2 py-1">
           <ThemeToggle />
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-lg px-2 py-1.5 hover:bg-muted"
           >
             <LogOut className="w-3.5 h-3.5" />
             Đăng xuất
