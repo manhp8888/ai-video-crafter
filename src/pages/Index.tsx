@@ -1,10 +1,13 @@
-import { Sparkles, Bot, AlertTriangle } from "lucide-react";
+import { Sparkles, Bot, AlertTriangle, ImagePlus } from "lucide-react";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PromptTemplates from "@/components/PromptTemplates";
 import PromptForm from "@/components/PromptForm";
 import PromptOutput from "@/components/PromptOutput";
 import PromptHistory from "@/components/PromptHistory";
 import PremiumBanner from "@/components/PremiumBanner";
 import AdPlaceholder from "@/components/AdPlaceholder";
+import ReferencePrompt from "@/components/ReferencePrompt";
 import { Switch } from "@/components/ui/switch";
 import { usePromptGenerator } from "@/hooks/use-prompt-generator";
 import { useUsageLimit } from "@/hooks/use-usage-limit";
