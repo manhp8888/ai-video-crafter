@@ -119,6 +119,10 @@ REQUIREMENTS:
                 hashtags: { type: "array", items: { type: "string" }, description: "8-12 trending hashtags" },
                 thumbnail_prompt: { type: "string", description: "Detailed 4K thumbnail prompt with composition, lighting, focal point" },
                 master_prompt: { type: "string", description: "Complete master prompt with ALL technical specs, ready to paste into AI tool" },
+                visual_prompt: { type: "string", description: "Detailed visual description: subject appearance, environment, colors, lighting, textures, composition" },
+                motion_prompt: { type: "string", description: "Detailed motion: camera movement, subject action, physics, transitions, pacing" },
+                cinematic_style: { type: "string", description: "Overall cinematic aesthetic direction" },
+                negative_prompt: { type: "string", description: "What to avoid: artifacts, low quality, unwanted elements" },
                 camera_settings: {
                   type: "object",
                   properties: {
