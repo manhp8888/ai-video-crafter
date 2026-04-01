@@ -1,15 +1,19 @@
-import { Sparkles, Bot, AlertTriangle } from "lucide-react";
+import { Sparkles, Bot, AlertTriangle, ImagePlus } from "lucide-react";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PromptTemplates from "@/components/PromptTemplates";
 import PromptForm from "@/components/PromptForm";
 import PromptOutput from "@/components/PromptOutput";
 import PromptHistory from "@/components/PromptHistory";
 import PremiumBanner from "@/components/PremiumBanner";
 import AdPlaceholder from "@/components/AdPlaceholder";
+import ReferencePrompt from "@/components/ReferencePrompt";
 import { Switch } from "@/components/ui/switch";
 import { usePromptGenerator } from "@/hooks/use-prompt-generator";
 import { useUsageLimit } from "@/hooks/use-usage-limit";
 
 const Index = () => {
+  const [mainTab, setMainTab] = useState("generate");
   const {
     formData,
     setFormData,
@@ -83,28 +87,45 @@ const Index = () => {
 
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         <div className="space-y-6">
-          <PromptTemplates onSelect={handleTemplateSelect} />
-          <PromptForm
-            data={formData}
-            onChange={setFormData}
-            onGenerate={handleGenerateWithLimit}
-            onRandomIdea={handleRandomIdea}
-            onAISuggest={handleAISuggest}
-            isGenerating={isGenerating}
-            isSuggesting={isSuggesting}
-            useAI={useAI}
-            disabled={!canUse}
-          />
-          {rawPrompt && (
-            <PromptOutput
-              prompt={rawPrompt}
-              structured={generatedPrompt}
-              onEnhance={handleEnhanceWithLimit}
-              onRemix={handleRemixWithLimit}
-              isEnhancing={isEnhancing}
-              isPremium={isPremium}
-            />
-          )}
+          <Tabs value={mainTab} onValueChange={setMainTab}>
+            <TabsList className="w-full mb-4">
+              <TabsTrigger value="generate" className="flex-1 text-xs gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Tạo Prompt
+              </TabsTrigger>
+              <TabsTrigger value="reference" className="flex-1 text-xs gap-1.5">
+                <ImagePlus className="w-3.5 h-3.5" /> Từ Reference
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="generate" className="space-y-6 mt-0">
+              <PromptTemplates onSelect={handleTemplateSelect} />
+              <PromptForm
+                data={formData}
+                onChange={setFormData}
+                onGenerate={handleGenerateWithLimit}
+                onRandomIdea={handleRandomIdea}
+                onAISuggest={handleAISuggest}
+                isGenerating={isGenerating}
+                isSuggesting={isSuggesting}
+                useAI={useAI}
+                disabled={!canUse}
+              />
+              {rawPrompt && (
+                <PromptOutput
+                  prompt={rawPrompt}
+                  structured={generatedPrompt}
+                  onEnhance={handleEnhanceWithLimit}
+                  onRemix={handleRemixWithLimit}
+                  isEnhancing={isEnhancing}
+                  isPremium={isPremium}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="reference" className="mt-0">
+              <ReferencePrompt />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="space-y-5">

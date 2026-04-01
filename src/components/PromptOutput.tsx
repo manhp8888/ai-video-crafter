@@ -109,6 +109,10 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
 
         <div className="space-y-3">
           <OutputBlock icon="🎬" label="Tiêu đề" content={structured.title} />
+          {structured.visual_prompt && <OutputBlock icon="👁️" label="Visual Prompt" content={structured.visual_prompt} />}
+          {structured.motion_prompt && <OutputBlock icon="🎬" label="Motion Prompt" content={structured.motion_prompt} />}
+          {structured.cinematic_style && <OutputBlock icon="🎨" label="Cinematic Style" content={structured.cinematic_style} />}
+          {structured.negative_prompt && <OutputBlock icon="🚫" label="Negative Prompt" content={structured.negative_prompt} />}
           <OutputBlock icon="🎯" label="Master Prompt" content={structured.master_prompt} />
 
           {(cameraInfo || lightingInfo) && (

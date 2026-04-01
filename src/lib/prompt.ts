@@ -27,6 +27,10 @@ export interface GeneratedPrompt {
   hashtags: string[];
   thumbnail_prompt: string;
   master_prompt: string;
+  visual_prompt?: string;
+  motion_prompt?: string;
+  cinematic_style?: string;
+  negative_prompt?: string;
   camera_settings: {
     angle: string;
     lens: string;
