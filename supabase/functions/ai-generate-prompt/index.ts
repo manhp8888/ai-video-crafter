@@ -160,7 +160,7 @@ REQUIREMENTS:
                   },
                 },
               },
-              required: ["title", "description", "hashtags", "thumbnail_prompt", "master_prompt", "camera_settings", "lighting_settings", "scenes"],
+              required: ["title", "description", "hashtags", "thumbnail_prompt", "master_prompt", "visual_prompt", "motion_prompt", "cinematic_style", "negative_prompt", "camera_settings", "lighting_settings", "scenes"],
               additionalProperties: false,
             },
           },
