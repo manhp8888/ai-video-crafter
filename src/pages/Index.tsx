@@ -13,6 +13,7 @@ import { usePromptGenerator } from "@/hooks/use-prompt-generator";
 import { useUsageLimit } from "@/hooks/use-usage-limit";
 
 const Index = () => {
+  const [mainTab, setMainTab] = useState("generate");
   const {
     formData,
     setFormData,
