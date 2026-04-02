@@ -151,7 +151,7 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
                   {structured.scenes.map((scene) => (
                     <div key={scene.scene} className="glass-card rounded-xl p-3.5">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-primary">Cảnh {scene.scene}</span>
+                        <span className="text-xs font-bold text-primary">{scene.scene}</span>
                         <CopyBtn text={scene.description} />
                       </div>
                       <p className="text-xs text-foreground/90 leading-relaxed mb-2.5">{scene.description}</p>
