@@ -71,7 +71,11 @@ TECHNICAL SPECS:
 - Depth of field: shallow (f/1.4-2.8) for portrait, deep (f/8-16) for landscape
 - Lens type: wide (14-24mm), standard (35-50mm), telephoto (85-200mm)
 - Light: key light direction, fill ratio, color temperature (3200K warm / 5600K daylight / 6500K cool)
-- The master_prompt MUST be directly paste-able into ${modelName} with zero editing needed
+- The master_prompt MUST be a SHORT overview/style guide (1-2 sentences max), NOT contain scene details
+- Each scene in the scenes array must be a COMPLETE, STANDALONE prompt that can be directly pasted into ${modelName} without any other context
+- Each scene prompt must include ALL necessary details: subject, action, environment, camera, lighting, motion, style, quality tags
+- Scenes must be INDEPENDENT - each one works on its own as a complete prompt for the AI video tool
+- Do NOT reference other scenes or use "continue from previous scene"
 
 Generate exactly ${sceneCount} scenes for a ${durationSeconds}-second video.
 Output language: ${outLang}
