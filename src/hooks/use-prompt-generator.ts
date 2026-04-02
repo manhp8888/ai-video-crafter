@@ -89,7 +89,7 @@ export function usePromptGenerator() {
     setIsSuggesting(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-suggest", {
-        body: { idea: formData.idea },
+        body: { idea: formData.idea, mode: formData.mode },
       });
       if (error) throw error;
       const s = data?.suggestion;
@@ -103,8 +103,17 @@ export function usePromptGenerator() {
           mood: s.mood || prev.mood,
           model: s.model || prev.model,
           duration: s.duration || prev.duration,
+          // Advanced fields
+          cameraAngle: s.cameraAngle || prev.cameraAngle,
+          cameraLens: s.cameraLens || prev.cameraLens,
+          cameraMotion: s.cameraMotion || prev.cameraMotion,
+          // Pro fields
+          lightingType: s.lightingType || prev.lightingType,
+          timeOfDay: s.timeOfDay || prev.timeOfDay,
+          colorTemperature: s.colorTemperature || prev.colorTemperature,
+          realism: s.realism || prev.realism,
         }));
-        toast({ title: "AI đã gợi ý xong!", description: "Tất cả trường đã được điền." });
+        toast({ title: "AI đã gợi ý xong!", description: "Tất cả trường đã được điền đầy đủ." });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Lỗi không xác định";
@@ -112,7 +121,7 @@ export function usePromptGenerator() {
     } finally {
       setIsSuggesting(false);
     }
-  }, [formData.idea, toast]);
+  }, [formData.idea, formData.mode, toast]);
 
   const handleEnhance = useCallback(async () => {
     if (!rawPrompt) return;

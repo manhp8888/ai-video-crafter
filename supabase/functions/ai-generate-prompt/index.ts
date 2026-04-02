@@ -71,7 +71,11 @@ TECHNICAL SPECS:
 - Depth of field: shallow (f/1.4-2.8) for portrait, deep (f/8-16) for landscape
 - Lens type: wide (14-24mm), standard (35-50mm), telephoto (85-200mm)
 - Light: key light direction, fill ratio, color temperature (3200K warm / 5600K daylight / 6500K cool)
-- The master_prompt MUST be directly paste-able into ${modelName} with zero editing needed
+- The master_prompt MUST be a SHORT overview/style guide (1-2 sentences max), NOT contain scene details
+- Each scene in the scenes array must be a COMPLETE, STANDALONE prompt that can be directly pasted into ${modelName} without any other context
+- Each scene prompt must include ALL necessary details: subject, action, environment, camera, lighting, motion, style, quality tags
+- Scenes must be INDEPENDENT - each one works on its own as a complete prompt for the AI video tool
+- Do NOT reference other scenes or use "continue from previous scene"
 
 Generate exactly ${sceneCount} scenes for a ${durationSeconds}-second video.
 Output language: ${outLang}
@@ -118,7 +122,7 @@ REQUIREMENTS:
                 description: { type: "string", description: "SEO-optimized video description 3-4 sentences with keywords" },
                 hashtags: { type: "array", items: { type: "string" }, description: "8-12 trending hashtags" },
                 thumbnail_prompt: { type: "string", description: "Detailed 4K thumbnail prompt with composition, lighting, focal point" },
-                master_prompt: { type: "string", description: "Complete master prompt with ALL technical specs, ready to paste into AI tool" },
+                master_prompt: { type: "string", description: "Short 1-2 sentence style overview/guide. Do NOT include scene details here." },
                 visual_prompt: { type: "string", description: "Detailed visual description: subject appearance, environment, colors, lighting, textures, composition" },
                 motion_prompt: { type: "string", description: "Detailed motion: camera movement, subject action, physics, transitions, pacing" },
                 cinematic_style: { type: "string", description: "Overall cinematic aesthetic direction" },
@@ -150,7 +154,7 @@ REQUIREMENTS:
                     type: "object",
                     properties: {
                       scene: { type: "number" },
-                      description: { type: "string", description: "Ultra-detailed scene: subject, action, environment, textures, particles, physics" },
+                      description: { type: "string", description: "COMPLETE STANDALONE PROMPT for this scene - must work independently when pasted into AI video tool. Include subject, action, environment, style, quality, camera, lighting all in one prompt." },
                       camera: { type: "string", description: "Lens focal length, movement speed, direction, angle" },
                       lighting: { type: "string", description: "Specific lighting setup for this scene" },
                       motion: { type: "string", description: "Subject movement, physics, particle effects" },
