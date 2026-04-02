@@ -17,7 +17,7 @@ const basicDropdowns = [
   { label: "Máy quay", key: "camera" as const, placeholder: "Chọn", options: ["Static Shot", "Slow Zoom", "Drone Shot", "Tracking Shot", "Handheld", "Cinematic Pan", "Dolly Zoom", "360° Rotation", "First Person", "Top Down", "Steadicam", "Crane Shot"] },
   { label: "Ánh sáng", key: "lighting" as const, placeholder: "Chọn", options: ["Soft Lighting", "Neon Lighting", "Sunset Lighting", "Studio Lighting", "Dramatic Lighting", "Natural Light", "Backlight", "Rim Light", "Volumetric Light", "Moonlight", "Golden Hour", "Blue Hour"] },
   { label: "Tâm trạng", key: "mood" as const, placeholder: "Chọn", options: ["Epic", "Dark", "Dreamy", "Emotional", "Futuristic", "Peaceful", "Mysterious", "Romantic", "Energetic", "Melancholic", "Cinematic", "Horror"] },
-  { label: "Thời lượng", key: "duration" as const, placeholder: "Chọn", options: ["5 giây", "10 giây", "15 giây", "20 giây", "30 giây", "45 giây", "60 giây", "90 giây"] },
+  { label: "Thời lượng", key: "duration" as const, placeholder: "Chọn", options: ["5 giây", "10 giây", "15 giây", "20 giây", "30 giây", "45 giây", "60 giây", "90 giây", "120 giây", "150 giây", "180 giây", "210 giây", "240 giây", "270 giây", "300 giây"] },
   {
     label: "Mô hình AI", key: "model" as const, placeholder: "Chọn",
     options: [

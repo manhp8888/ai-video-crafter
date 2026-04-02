@@ -134,19 +134,25 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
 
           {structured.scenes && structured.scenes.length > 0 && (
             <div className="bg-background/50 border border-border/50 rounded-xl p-3.5">
-              <button onClick={() => setExpandedScenes(!expandedScenes)} className="flex items-center justify-between w-full mb-1.5">
-                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                  🎞️ Cảnh quay ({structured.scenes.length} cảnh)
-                </span>
-                {expandedScenes ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
-              </button>
+              <div className="flex items-center justify-between mb-1.5">
+                <button onClick={() => setExpandedScenes(!expandedScenes)} className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                    🎞️ Cảnh quay ({structured.scenes.length} cảnh)
+                  </span>
+                  {expandedScenes ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                </button>
+                <CopyBtn
+                  text={structured.scenes.map((s) => s.description).join("\n\n")}
+                  label="Chép tất cả cảnh"
+                />
+              </div>
               {expandedScenes && (
                 <div className="space-y-2.5 mt-2">
                   {structured.scenes.map((scene) => (
                     <div key={scene.scene} className="glass-card rounded-xl p-3.5">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold text-primary">Cảnh {scene.scene}</span>
-                        <CopyBtn text={`${scene.camera}\n${scene.lighting}\n${scene.motion}\n${scene.description}`} />
+                        <CopyBtn text={scene.description} />
                       </div>
                       <p className="text-xs text-foreground/90 leading-relaxed mb-2.5">{scene.description}</p>
                       <div className="flex flex-wrap gap-1.5">

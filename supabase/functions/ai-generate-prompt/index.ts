@@ -154,7 +154,7 @@ REQUIREMENTS:
                     type: "object",
                     properties: {
                       scene: { type: "number" },
-                      description: { type: "string", description: "Ultra-detailed scene: subject, action, environment, textures, particles, physics" },
+                      description: { type: "string", description: "COMPLETE STANDALONE PROMPT for this scene - must work independently when pasted into AI video tool. Include subject, action, environment, style, quality, camera, lighting all in one prompt." },
                       camera: { type: "string", description: "Lens focal length, movement speed, direction, angle" },
                       lighting: { type: "string", description: "Specific lighting setup for this scene" },
                       motion: { type: "string", description: "Subject movement, physics, particle effects" },

@@ -9,25 +9,72 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { idea } = await req.json();
+    const { idea, mode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `Bạn là chuyên gia content video AI. Dựa trên ý tưởng người dùng, hãy gợi ý toàn bộ thông số để tạo video AI tốt nhất.
-Trả về JSON với đúng format sau (không thêm gì khác):
-{
-  "style": "một trong: Cinematic, Anime, Realistic, Cyberpunk, Fantasy, Documentary, Pixar Style, 3D Render, Watercolor, Oil Painting, Sketch, Vaporwave, Retro, Minimalist",
-  "camera": "một trong: Static Shot, Slow Zoom, Drone Shot, Tracking Shot, Handheld, Cinematic Pan, Dolly Zoom, 360° Rotation, First Person, Top Down",
-  "lighting": "một trong: Soft Lighting, Neon Lighting, Sunset Lighting, Studio Lighting, Dramatic Lighting, Natural Light, Backlight, Rim Light, Volumetric Light, Moonlight",
-  "mood": "một trong: Epic, Dark, Dreamy, Emotional, Futuristic, Peaceful, Mysterious, Romantic, Energetic, Melancholic",
-  "model": "gợi ý mô hình AI phù hợp nhất",
-  "duration": "thời lượng phù hợp, ví dụ: 10 giây, 15 giây",
-  "title": "tiêu đề hấp dẫn cho video",
-  "description": "mô tả SEO ngắn gọn",
-  "hashtags": "5-8 hashtag phù hợp",
-  "coverPrompt": "prompt tạo ảnh bìa chi tiết",
-  "enhancedIdea": "ý tưởng được nâng cấp và chi tiết hơn"
-}`;
+    const promptMode = mode || "basic";
+    const isAdvanced = promptMode === "advanced" || promptMode === "pro";
+    const isPro = promptMode === "pro";
+
+    const systemPrompt = `Bạn là chuyên gia content video AI và đạo diễn điện ảnh chuyên nghiệp. Dựa trên ý tưởng người dùng, hãy gợi ý TOÀN BỘ thông số để tạo video AI chất lượng cao nhất.
+
+Lưu ý quan trọng:
+- Các giá trị style, camera, lighting, mood PHẢI nằm trong danh sách cho sẵn
+- Chọn model AI phù hợp nhất với nội dung
+- enhancedIdea phải chi tiết, bổ sung thêm mô tả về nhân vật, bối cảnh, hành động, ánh sáng, không khí
+- title phải hấp dẫn, clickbait
+- description phải chuẩn SEO
+- hashtags phải trending
+- coverPrompt phải chi tiết về bố cục, ánh sáng, màu sắc cho ảnh bìa 4K
+
+Danh sách giá trị hợp lệ:
+- style: Cinematic, Anime, Realistic, Cyberpunk, Fantasy, Documentary, Pixar Style, 3D Render, Watercolor, Oil Painting, Sketch, Vaporwave, Retro, Minimalist, Photorealistic, Hyper Realistic
+- camera: Static Shot, Slow Zoom, Drone Shot, Tracking Shot, Handheld, Cinematic Pan, Dolly Zoom, 360° Rotation, First Person, Top Down, Steadicam, Crane Shot
+- lighting: Soft Lighting, Neon Lighting, Sunset Lighting, Studio Lighting, Dramatic Lighting, Natural Light, Backlight, Rim Light, Volumetric Light, Moonlight, Golden Hour, Blue Hour
+- mood: Epic, Dark, Dreamy, Emotional, Futuristic, Peaceful, Mysterious, Romantic, Energetic, Melancholic, Cinematic, Horror
+- duration: 5 giây, 10 giây, 15 giây, 20 giây, 30 giây, 45 giây, 60 giây, 90 giây, 120 giây, 150 giây, 180 giây, 210 giây, 240 giây, 270 giây, 300 giây
+- model: Runway, Pika, Sora, Kling, Luma Dream Machine, Stable Video, Vidu, PixVerse, Hailuo AI, Jimeng (即梦), Tongyi Wanxiang (通义万相), Midjourney, DALL-E 3, Flux, Wan (万), CogVideoX, Genmo
+${isAdvanced ? `
+Giá trị Advanced:
+- cameraAngle: Eye Level, Low Angle, High Angle, Bird's Eye, Dutch Angle, Worm's Eye, Over the Shoulder
+- cameraLens: 14mm Ultra Wide, 24mm Wide, 35mm Standard, 50mm Normal, 85mm Portrait, 135mm Telephoto, 200mm Telephoto, Anamorphic
+- cameraMotion: Tracking, Handheld, Slow Motion, Speed Ramp, Whip Pan, Dolly In, Dolly Out, Orbit, Push In, Pull Out` : ""}
+${isPro ? `
+Giá trị Pro:
+- lightingType: Key + Fill + Rim, Soft Diffused, Hard Direct, Neon RGB, Volumetric Fog, Practical Lights, Chiaroscuro, Rembrandt
+- timeOfDay: Golden Hour, Blue Hour, Midnight, Dawn, High Noon, Overcast Day, Sunset, Twilight
+- colorTemperature: 2700K Warm, 3200K Tungsten, 4100K Fluorescent, 5600K Daylight, 6500K Cool, 7500K Shade, Mixed Warm/Cool
+- realism: Photorealistic, Hyper Realistic, Ultra Detail 8K, Cinematic Film Stock, RAW Ungraded, Film Grain 35mm` : ""}`;
+
+    const properties: Record<string, { type: string }> = {
+      style: { type: "string" },
+      camera: { type: "string" },
+      lighting: { type: "string" },
+      mood: { type: "string" },
+      model: { type: "string" },
+      duration: { type: "string" },
+      title: { type: "string" },
+      description: { type: "string" },
+      hashtags: { type: "string" },
+      coverPrompt: { type: "string" },
+      enhancedIdea: { type: "string" },
+    };
+    const required = ["style", "camera", "lighting", "mood", "model", "duration", "title", "description", "hashtags", "coverPrompt", "enhancedIdea"];
+
+    if (isAdvanced) {
+      properties.cameraAngle = { type: "string" };
+      properties.cameraLens = { type: "string" };
+      properties.cameraMotion = { type: "string" };
+      required.push("cameraAngle", "cameraLens", "cameraMotion");
+    }
+    if (isPro) {
+      properties.lightingType = { type: "string" };
+      properties.timeOfDay = { type: "string" };
+      properties.colorTemperature = { type: "string" };
+      properties.realism = { type: "string" };
+      required.push("lightingType", "timeOfDay", "colorTemperature", "realism");
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -36,37 +83,24 @@ Trả về JSON với đúng format sau (không thêm gì khác):
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Ý tưởng: ${idea}` },
+          { role: "user", content: `Ý tưởng: ${idea}\nChế độ: ${promptMode}` },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "suggest_video_params",
-              description: "Suggest all parameters for AI video creation",
-              parameters: {
-                type: "object",
-                properties: {
-                  style: { type: "string" },
-                  camera: { type: "string" },
-                  lighting: { type: "string" },
-                  mood: { type: "string" },
-                  model: { type: "string" },
-                  duration: { type: "string" },
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  hashtags: { type: "string" },
-                  coverPrompt: { type: "string" },
-                  enhancedIdea: { type: "string" },
-                },
-                required: ["style", "camera", "lighting", "mood", "model", "duration", "title", "description", "hashtags", "coverPrompt", "enhancedIdea"],
-                additionalProperties: false,
-              },
+        tools: [{
+          type: "function",
+          function: {
+            name: "suggest_video_params",
+            description: "Suggest all parameters for AI video creation",
+            parameters: {
+              type: "object",
+              properties,
+              required,
+              additionalProperties: false,
             },
           },
-        ],
+        }],
         tool_choice: { type: "function", function: { name: "suggest_video_params" } },
       }),
     });
@@ -75,11 +109,6 @@ Trả về JSON với đúng format sau (không thêm gì khác):
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Đã vượt giới hạn yêu cầu, vui lòng thử lại sau." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Hết credits AI, vui lòng nạp thêm." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
