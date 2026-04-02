@@ -66,6 +66,15 @@ CORE PRINCIPLES:
 5. EMOTION-DRIVEN: Every scene conveys specific emotion through lighting, angle, and pacing
 ${advancedContext}
 
+CONSISTENCY RULES (CRITICAL):
+- ALL scenes MUST share the same visual DNA: same color palette, same color grading/LUT, same aspect ratio, same resolution
+- Characters must maintain IDENTICAL appearance across all scenes: same clothing, hairstyle, skin tone, body type, accessories
+- Lighting style must be consistent: if scene 1 uses warm golden hour (3200K), ALL scenes must use the same color temperature unless there's a deliberate narrative shift
+- Camera style must be cohesive: if using anamorphic lens in scene 1, maintain anamorphic characteristics throughout
+- Environment continuity: weather, time of day, season must remain consistent unless the story explicitly changes them
+- Motion style consistency: if scene 1 uses slow cinematic movement, don't suddenly switch to handheld shaky cam without narrative reason
+- Include a "style anchor" in every scene description that references the overall visual identity (e.g., "warm cinematic tones, anamorphic bokeh, golden hour palette")
+
 TECHNICAL SPECS:
 - Resolution: 4K/8K, frame rate (24fps cinematic / 60fps smooth)
 - Depth of field: shallow (f/1.4-2.8) for portrait, deep (f/8-16) for landscape
@@ -73,9 +82,9 @@ TECHNICAL SPECS:
 - Light: key light direction, fill ratio, color temperature (3200K warm / 5600K daylight / 6500K cool)
 - The master_prompt MUST be a SHORT overview/style guide (1-2 sentences max), NOT contain scene details
 - Each scene in the scenes array must be a COMPLETE, STANDALONE prompt that can be directly pasted into ${modelName} without any other context
-- Each scene prompt must include ALL necessary details: subject, action, environment, camera, lighting, motion, style, quality tags
-- Scenes must be INDEPENDENT - each one works on its own as a complete prompt for the AI video tool
-- Do NOT reference other scenes or use "continue from previous scene"
+- Each scene prompt must include ALL necessary details: subject, action, environment, camera, lighting, motion, style, quality tags AND a consistent style anchor
+- Scenes must be INDEPENDENT but VISUALLY UNIFIED - each works alone but maintains the same visual identity
+- Do NOT reference other scenes or use "continue from previous scene" - instead repeat the style anchor keywords
 
 Generate exactly ${sceneCount} scenes for a ${durationSeconds}-second video.
 Output language: ${outLang}

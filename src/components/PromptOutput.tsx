@@ -142,7 +142,9 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
                   {expandedScenes ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
                 </button>
                 <CopyBtn
-                  text={structured.scenes.map((s) => s.description).join("\n\n")}
+                  text={structured.scenes.map((s) => 
+                    `${s.description}\n📷 ${s.camera} | 💡 ${s.lighting} | 🎬 ${s.motion}`
+                  ).join("\n\n")}
                   label="Chép tất cả cảnh"
                 />
               </div>
@@ -152,7 +154,7 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
                     <div key={scene.scene} className="glass-card rounded-xl p-3.5">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold text-primary">{scene.scene}</span>
-                        <CopyBtn text={scene.description} />
+                        <CopyBtn text={`${scene.description}\n📷 ${scene.camera} | 💡 ${scene.lighting} | 🎬 ${scene.motion}`} />
                       </div>
                       <p className="text-xs text-foreground/90 leading-relaxed mb-2.5">{scene.description}</p>
                       <div className="flex flex-wrap gap-1.5">
