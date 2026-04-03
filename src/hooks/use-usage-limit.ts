@@ -11,13 +11,14 @@ export function useUsageLimit(feature: string, freeLimit: number) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Check premium
+      // Check premium with expiry
       const { data: activation } = await supabase
         .from("premium_activations")
-        .select("id")
+        .select("id, expires_at")
         .eq("user_id", user.id)
         .maybeSingle();
-      setIsPremium(!!activation);
+      const isActive = !!activation && (!activation.expires_at || new Date(activation.expires_at) > new Date());
+      setIsPremium(isActive);
 
       // Check today's usage
       const today = new Date().toISOString().split("T")[0];
