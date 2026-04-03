@@ -343,7 +343,7 @@ const Admin = () => {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Đã dùng: <span className="font-semibold text-foreground">{c.current_uses}</span>/{c.max_uses} · Tạo: {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                          Đã dùng: <span className="font-semibold text-foreground">{c.current_uses}</span>/{c.max_uses} · {c.premium_days} ngày · Tạo: {new Date(c.created_at).toLocaleDateString("vi-VN")}
                         </p>
                       </div>
                       <div className="flex gap-1">
