@@ -47,9 +47,11 @@ const Admin = () => {
   const [loadingData, setLoadingData] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [newMaxUses, setNewMaxUses] = useState("100");
+  const [newPremiumDays, setNewPremiumDays] = useState("30");
   const [creating, setCreating] = useState(false);
   const [initLoading, setInitLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [grantDays, setGrantDays] = useState<Record<string, string>>({});
 
   const loadUsers = async () => {
     setLoadingData(true);
