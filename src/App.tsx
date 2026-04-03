@@ -63,6 +63,8 @@ const App = () => {
                 <Route path="/enhance" element={<ImageEnhance />} />
                 <Route path="/ai-video" element={<AIVideo />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/account" element={<Account />} />
+                <Route path="/marketplace" element={<Marketplace />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AppLayout>
