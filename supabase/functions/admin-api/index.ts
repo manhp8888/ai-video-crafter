@@ -58,17 +58,20 @@ serve(async (req) => {
       case "list-users": {
         const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
         if (error) throw error;
-        // Get premium activations
-        const { data: activations } = await supabaseAdmin.from("premium_activations").select("user_id, activated_at");
-        const premiumMap = new Map((activations || []).map(a => [a.user_id, a.activated_at]));
+        const { data: activations } = await supabaseAdmin.from("premium_activations").select("user_id, activated_at, expires_at");
+        const premiumMap = new Map((activations || []).map(a => [a.user_id, a]));
         
-        result = (users || []).map(u => ({
-          id: u.id,
-          email: u.email,
-          created_at: u.created_at,
-          isPremium: premiumMap.has(u.id),
-          premiumSince: premiumMap.get(u.id) || null,
-        }));
+        result = (users || []).map(u => {
+          const activation = premiumMap.get(u.id);
+          return {
+            id: u.id,
+            email: u.email,
+            created_at: u.created_at,
+            isPremium: !!activation && (!activation.expires_at || new Date(activation.expires_at) > new Date()),
+            premiumSince: activation?.activated_at || null,
+            premiumExpiresAt: activation?.expires_at || null,
+          };
+        });
         break;
       }
 
