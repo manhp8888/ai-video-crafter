@@ -66,23 +66,52 @@ const PremiumBanner = () => {
         return;
       }
 
-      const { error: activateError } = await supabase
-        .from("premium_activations")
-        .insert({ user_id: user.id, code_id: codeData.id });
+      const premiumDays = (codeData as Record<string, unknown>).premium_days as number || 30;
+      const expiresDate = new Date();
+      expiresDate.setDate(expiresDate.getDate() + premiumDays);
 
-      if (activateError) {
-        if (activateError.code === "23505") {
-          toast({ title: "Đã kích hoạt rồi", description: "Tài khoản của bạn đã là Premium." });
-          setIsActivated(true);
-        } else {
-          throw activateError;
+      // Check existing activation - extend if exists
+      const { data: existing } = await supabase
+        .from("premium_activations")
+        .select("id, expires_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existing) {
+        let baseDate = new Date();
+        if (existing.expires_at) {
+          const exp = new Date(existing.expires_at);
+          if (exp > baseDate) baseDate = exp;
         }
-        setIsChecking(false);
-        return;
+        baseDate.setDate(baseDate.getDate() + premiumDays);
+        await supabase
+          .from("premium_activations")
+          .update({ expires_at: baseDate.toISOString(), code_id: codeData.id })
+          .eq("id", existing.id);
+      } else {
+        const { error: activateError } = await supabase
+          .from("premium_activations")
+          .insert({ user_id: user.id, code_id: codeData.id, expires_at: expiresDate.toISOString() });
+        if (activateError) {
+          if (activateError.code === "23505") {
+            toast({ title: "Đã kích hoạt rồi", description: "Tài khoản của bạn đã là Premium." });
+            setIsActivated(true);
+          } else {
+            throw activateError;
+          }
+          setIsChecking(false);
+          return;
+        }
       }
 
+      // Increment usage
+      await supabase
+        .from("premium_codes")
+        .update({ current_uses: codeData.current_uses + 1 })
+        .eq("id", codeData.id);
+
       setIsActivated(true);
-      toast({ title: "🎉 Kích hoạt thành công!", description: "Bạn đã được nâng cấp lên Premium." });
+      toast({ title: "🎉 Kích hoạt thành công!", description: `Premium ${premiumDays} ngày` });
     } catch (e) {
       toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi kích hoạt", variant: "destructive" });
     } finally {
