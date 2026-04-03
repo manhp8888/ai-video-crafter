@@ -13,7 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Sparkles, Wand2, Scissors, Eraser, ImageUp, Video, LogOut, Shield } from "lucide-react";
+import { Sparkles, Wand2, Scissors, Eraser, ImageUp, Video, LogOut, Shield, Store, User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const menuItems = [
@@ -22,6 +22,8 @@ const menuItems = [
   { title: "Xóa nền ảnh", icon: Eraser, path: "/remove-bg" },
   { title: "Nâng cấp ảnh", icon: ImageUp, path: "/enhance" },
   { title: "Tạo video AI", icon: Video, path: "/ai-video" },
+  { title: "Chợ", icon: Store, path: "/marketplace" },
+  { title: "Tài khoản", icon: User, path: "/account" },
 ];
 
 const AppSidebar = () => {

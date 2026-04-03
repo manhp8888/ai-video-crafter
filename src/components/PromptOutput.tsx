@@ -143,7 +143,7 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
                 </button>
                 <CopyBtn
                   text={structured.scenes.map((s) => 
-                    `${s.description}\n📷 ${s.camera} | 💡 ${s.lighting} | 🎬 ${s.motion}`
+                    `${s.description}\nCamera: ${s.camera} | Lighting: ${s.lighting} | Motion: ${s.motion}`
                   ).join("\n\n")}
                   label="Chép tất cả cảnh"
                 />
@@ -154,7 +154,7 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
                     <div key={scene.scene} className="glass-card rounded-xl p-3.5">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold text-primary">{scene.scene}</span>
-                        <CopyBtn text={`${scene.description}\n📷 ${scene.camera} | 💡 ${scene.lighting} | 🎬 ${scene.motion}`} />
+                        <CopyBtn text={`${scene.description}\nCamera: ${scene.camera} | Lighting: ${scene.lighting} | Motion: ${scene.motion}`} />
                       </div>
                       <p className="text-xs text-foreground/90 leading-relaxed mb-2.5">{scene.description}</p>
                       <div className="flex flex-wrap gap-1.5">

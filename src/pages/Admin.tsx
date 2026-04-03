@@ -11,6 +11,7 @@ interface UserItem {
   created_at: string;
   isPremium: boolean;
   premiumSince: string | null;
+  premiumExpiresAt: string | null;
 }
 
 interface CodeItem {
@@ -19,6 +20,7 @@ interface CodeItem {
   is_active: boolean;
   max_uses: number;
   current_uses: number;
+  premium_days: number;
   created_at: string;
 }
 
@@ -45,9 +47,11 @@ const Admin = () => {
   const [loadingData, setLoadingData] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [newMaxUses, setNewMaxUses] = useState("100");
+  const [newPremiumDays, setNewPremiumDays] = useState("30");
   const [creating, setCreating] = useState(false);
   const [initLoading, setInitLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [grantDays, setGrantDays] = useState<Record<string, string>>({});
 
   const loadUsers = async () => {
     setLoadingData(true);
@@ -110,7 +114,7 @@ const Admin = () => {
     if (!newCode.trim()) return;
     setCreating(true);
     try {
-      await adminCall("create-code", { code: newCode.trim(), max_uses: parseInt(newMaxUses) || 100 });
+      await adminCall("create-code", { code: newCode.trim(), max_uses: parseInt(newMaxUses) || 100, premium_days: parseInt(newPremiumDays) || 30 });
       toast({ title: "Tạo mã thành công!" });
       setNewCode("");
       loadCodes();
@@ -144,6 +148,18 @@ const Admin = () => {
     try {
       await adminCall("revoke-premium", { target_user_id: userId });
       toast({ title: "Đã thu hồi Premium." });
+      loadUsers();
+    } catch (e: unknown) {
+      toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
+    }
+  };
+
+  const handleGrantPremium = async (userId: string) => {
+    const days = parseInt(grantDays[userId] || "30") || 30;
+    try {
+      await adminCall("grant-premium", { target_user_id: userId, days });
+      toast({ title: `Đã cấp Premium ${days} ngày.` });
+      setGrantDays((prev) => ({ ...prev, [userId]: "" }));
       loadUsers();
     } catch (e: unknown) {
       toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
@@ -290,6 +306,13 @@ const Admin = () => {
                   placeholder="Số lần dùng"
                   className="w-28 rounded-xl h-10"
                 />
+                <Input
+                  type="number"
+                  value={newPremiumDays}
+                  onChange={(e) => setNewPremiumDays(e.target.value)}
+                  placeholder="Số ngày"
+                  className="w-28 rounded-xl h-10"
+                />
                 <Button onClick={handleCreateCode} disabled={creating || !newCode.trim()} className="h-10 rounded-xl">
                   {creating ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Plus className="w-4 h-4 mr-1.5" />}
                   Tạo mã
@@ -320,7 +343,7 @@ const Admin = () => {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Đã dùng: <span className="font-semibold text-foreground">{c.current_uses}</span>/{c.max_uses} · Tạo: {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                          Đã dùng: <span className="font-semibold text-foreground">{c.current_uses}</span>/{c.max_uses} · {c.premium_days} ngày · Tạo: {new Date(c.created_at).toLocaleDateString("vi-VN")}
                         </p>
                       </div>
                       <div className="flex gap-1">
@@ -370,14 +393,27 @@ const Admin = () => {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Đăng ký: {new Date(u.created_at).toLocaleDateString("vi-VN")}
                           {u.premiumSince && ` · Premium từ: ${new Date(u.premiumSince).toLocaleDateString("vi-VN")}`}
+                          {u.premiumExpiresAt && ` · Hết hạn: ${new Date(u.premiumExpiresAt).toLocaleDateString("vi-VN")}`}
                         </p>
                       </div>
                     </div>
-                    {u.isPremium && (
-                      <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl shrink-0" onClick={() => handleRevokePremium(u.id)}>
-                        Thu hồi
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Input
+                        type="number"
+                        value={grantDays[u.id] || ""}
+                        onChange={(e) => setGrantDays(prev => ({ ...prev, [u.id]: e.target.value }))}
+                        placeholder="30"
+                        className="w-16 h-8 rounded-lg text-xs text-center"
+                      />
+                      <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => handleGrantPremium(u.id)}>
+                        Cấp
                       </Button>
-                    )}
+                      {u.isPremium && (
+                        <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl text-destructive" onClick={() => handleRevokePremium(u.id)}>
+                          Thu hồi
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

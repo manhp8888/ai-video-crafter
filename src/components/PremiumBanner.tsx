@@ -20,10 +20,16 @@ const PremiumBanner = () => {
         if (!user) { setLoading(false); return; }
         const { data } = await supabase
           .from("premium_activations")
-          .select("id")
+          .select("id, expires_at")
           .eq("user_id", user.id)
           .maybeSingle();
-        setIsActivated(!!data);
+        if (data) {
+          if (data.expires_at) {
+            setIsActivated(new Date(data.expires_at) > new Date());
+          } else {
+            setIsActivated(true);
+          }
+        }
       } catch {
         // ignore
       } finally {
