@@ -393,14 +393,27 @@ const Admin = () => {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Đăng ký: {new Date(u.created_at).toLocaleDateString("vi-VN")}
                           {u.premiumSince && ` · Premium từ: ${new Date(u.premiumSince).toLocaleDateString("vi-VN")}`}
+                          {u.premiumExpiresAt && ` · Hết hạn: ${new Date(u.premiumExpiresAt).toLocaleDateString("vi-VN")}`}
                         </p>
                       </div>
                     </div>
-                    {u.isPremium && (
-                      <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl shrink-0" onClick={() => handleRevokePremium(u.id)}>
-                        Thu hồi
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Input
+                        type="number"
+                        value={grantDays[u.id] || ""}
+                        onChange={(e) => setGrantDays(prev => ({ ...prev, [u.id]: e.target.value }))}
+                        placeholder="30"
+                        className="w-16 h-8 rounded-lg text-xs text-center"
+                      />
+                      <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => handleGrantPremium(u.id)}>
+                        Cấp
                       </Button>
-                    )}
+                      {u.isPremium && (
+                        <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl text-destructive" onClick={() => handleRevokePremium(u.id)}>
+                          Thu hồi
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
