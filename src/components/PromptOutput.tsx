@@ -143,7 +143,7 @@ const PromptOutput = ({ prompt, structured, onEnhance, onRemix, isEnhancing, isP
                 </button>
                 <CopyBtn
                   text={structured.scenes.map((s) => 
-                    `${s.description}\n📷 ${s.camera} | 💡 ${s.lighting} | 🎬 ${s.motion}`
+                    `${s.description}\nCamera: ${s.camera} | Lighting: ${s.lighting} | Motion: ${s.motion}`
                   ).join("\n\n")}
                   label="Chép tất cả cảnh"
                 />
