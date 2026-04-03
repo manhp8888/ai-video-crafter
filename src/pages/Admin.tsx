@@ -11,6 +11,7 @@ interface UserItem {
   created_at: string;
   isPremium: boolean;
   premiumSince: string | null;
+  premiumExpiresAt: string | null;
 }
 
 interface CodeItem {
@@ -19,6 +20,7 @@ interface CodeItem {
   is_active: boolean;
   max_uses: number;
   current_uses: number;
+  premium_days: number;
   created_at: string;
 }
 
