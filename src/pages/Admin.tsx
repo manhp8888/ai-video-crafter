@@ -114,7 +114,7 @@ const Admin = () => {
     if (!newCode.trim()) return;
     setCreating(true);
     try {
-      await adminCall("create-code", { code: newCode.trim(), max_uses: parseInt(newMaxUses) || 100 });
+      await adminCall("create-code", { code: newCode.trim(), max_uses: parseInt(newMaxUses) || 100, premium_days: parseInt(newPremiumDays) || 30 });
       toast({ title: "Tạo mã thành công!" });
       setNewCode("");
       loadCodes();
