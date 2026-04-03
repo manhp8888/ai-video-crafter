@@ -14,6 +14,8 @@ import RemoveBg from "./pages/RemoveBg";
 import ImageEnhance from "./pages/ImageEnhance";
 import AIVideo from "./pages/AIVideo";
 import Admin from "./pages/Admin";
+import Account from "./pages/Account";
+import Marketplace from "./pages/Marketplace";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
