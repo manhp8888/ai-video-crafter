@@ -154,6 +154,18 @@ const Admin = () => {
     }
   };
 
+  const handleGrantPremium = async (userId: string) => {
+    const days = parseInt(grantDays[userId] || "30") || 30;
+    try {
+      await adminCall("grant-premium", { target_user_id: userId, days });
+      toast({ title: `Đã cấp Premium ${days} ngày.` });
+      setGrantDays((prev) => ({ ...prev, [userId]: "" }));
+      loadUsers();
+    } catch (e: unknown) {
+      toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
+    }
+  };
+
   const handleCopyCode = async (code: string) => {
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
