@@ -306,6 +306,13 @@ const Admin = () => {
                   placeholder="Số lần dùng"
                   className="w-28 rounded-xl h-10"
                 />
+                <Input
+                  type="number"
+                  value={newPremiumDays}
+                  onChange={(e) => setNewPremiumDays(e.target.value)}
+                  placeholder="Số ngày"
+                  className="w-28 rounded-xl h-10"
+                />
                 <Button onClick={handleCreateCode} disabled={creating || !newCode.trim()} className="h-10 rounded-xl">
                   {creating ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Plus className="w-4 h-4 mr-1.5" />}
                   Tạo mã
