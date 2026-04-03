@@ -18,18 +18,21 @@ export type Database = {
         Row: {
           activated_at: string
           code_id: string
+          expires_at: string | null
           id: string
           user_id: string
         }
         Insert: {
           activated_at?: string
           code_id: string
+          expires_at?: string | null
           id?: string
           user_id: string
         }
         Update: {
           activated_at?: string
           code_id?: string
+          expires_at?: string | null
           id?: string
           user_id?: string
         }
@@ -52,6 +55,7 @@ export type Database = {
           id: string
           is_active: boolean
           max_uses: number
+          premium_days: number
         }
         Insert: {
           code: string
@@ -61,6 +65,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
+          premium_days?: number
         }
         Update: {
           code?: string
@@ -70,6 +75,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
+          premium_days?: number
         }
         Relationships: []
       }
