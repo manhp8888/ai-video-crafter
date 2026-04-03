@@ -82,11 +82,12 @@ serve(async (req) => {
       }
 
       case "create-code": {
-        const { code, max_uses } = params;
+        const { code, max_uses, premium_days } = params;
         if (!code) throw new Error("Code is required");
         const { data, error } = await supabaseAdmin.from("premium_codes").insert({
-          code: code.toUpperCase(),
-          max_uses: max_uses || 1,
+          code: (code as string).toUpperCase(),
+          max_uses: (max_uses as number) || 1,
+          premium_days: (premium_days as number) || 30,
           created_by: user.id,
         }).select().single();
         if (error) throw error;
