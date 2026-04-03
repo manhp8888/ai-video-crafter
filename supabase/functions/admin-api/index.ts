@@ -113,8 +113,48 @@ serve(async (req) => {
 
       case "revoke-premium": {
         const { target_user_id } = params;
-        const { error } = await supabaseAdmin.from("premium_activations").delete().eq("user_id", target_user_id);
+        const { error } = await supabaseAdmin.from("premium_activations").delete().eq("user_id", target_user_id as string);
         if (error) throw error;
+        result = { success: true };
+        break;
+      }
+
+      case "grant-premium": {
+        const { target_user_id, days } = params;
+        const numDays = (days as number) || 30;
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + numDays);
+
+        // Check existing
+        const { data: existingActivation } = await supabaseAdmin
+          .from("premium_activations")
+          .select("id, expires_at")
+          .eq("user_id", target_user_id as string)
+          .maybeSingle();
+
+        if (existingActivation) {
+          let baseDate = new Date();
+          if (existingActivation.expires_at) {
+            const exp = new Date(existingActivation.expires_at);
+            if (exp > baseDate) baseDate = exp;
+          }
+          baseDate.setDate(baseDate.getDate() + numDays);
+          await supabaseAdmin.from("premium_activations")
+            .update({ expires_at: baseDate.toISOString() })
+            .eq("id", existingActivation.id);
+        } else {
+          // Need a code_id - use a system code or create one
+          let { data: sysCode } = await supabaseAdmin.from("premium_codes")
+            .select("id").eq("code", "ADMIN-GRANT").maybeSingle();
+          if (!sysCode) {
+            const { data: newCode } = await supabaseAdmin.from("premium_codes")
+              .insert({ code: "ADMIN-GRANT", max_uses: 999999, created_by: user.id })
+              .select("id").single();
+            sysCode = newCode;
+          }
+          await supabaseAdmin.from("premium_activations")
+            .insert({ user_id: target_user_id as string, code_id: sysCode!.id, expires_at: expiresAt.toISOString() });
+        }
         result = { success: true };
         break;
       }
