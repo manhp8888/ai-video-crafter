@@ -13,6 +13,7 @@ interface UserItem {
   isPremium: boolean;
   premiumSince: string | null;
   premiumExpiresAt: string | null;
+  balance: number;
 }
 
 interface CodeItem {
