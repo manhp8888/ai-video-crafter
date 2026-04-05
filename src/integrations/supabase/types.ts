@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      balance_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      marketplace_products: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          price: number
+          title: string
+        }
+        Insert: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          price?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          price?: number
+          title?: string
+        }
+        Relationships: []
+      }
       premium_activations: {
         Row: {
           activated_at: string
@@ -81,16 +147,19 @@ export type Database = {
       }
       profiles: {
         Row: {
+          balance: number
           created_at: string
           email: string | null
           id: string
         }
         Insert: {
+          balance?: number
           created_at?: string
           email?: string | null
           id: string
         }
         Update: {
+          balance?: number
           created_at?: string
           email?: string | null
           id?: string
@@ -120,6 +189,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_purchases: {
+        Row: {
+          id: string
+          product_id: string
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
