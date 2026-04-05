@@ -463,6 +463,11 @@ const Admin = () => {
             )}
           </div>
         )}
+
+        {/* Products Tab */}
+        {tab === "products" && (
+          <AdminProducts adminCall={adminCall} />
+        )}
       </div>
     </div>
   );
