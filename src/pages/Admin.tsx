@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, KeyRound, Plus, Trash2, ToggleLeft, ToggleRight, Crown, Loader2, Copy, Check, BarChart3, UserCheck, Hash } from "lucide-react";
+import { Shield, Users, KeyRound, Plus, Trash2, ToggleLeft, ToggleRight, Crown, Loader2, Copy, Check, BarChart3, UserCheck, Hash, Package, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdmin } from "@/hooks/use-admin";
 import { useToast } from "@/hooks/use-toast";
+import AdminProducts from "@/components/admin/AdminProducts";
 
 interface UserItem {
   id: string;
