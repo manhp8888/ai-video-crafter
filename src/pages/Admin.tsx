@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Shield, Users, KeyRound, Plus, Trash2, ToggleLeft, ToggleRight, Crown, Loader2, Copy, Check, BarChart3, UserCheck, Hash } from "lucide-react";
+import { Shield, Users, KeyRound, Plus, Trash2, ToggleLeft, ToggleRight, Crown, Loader2, Copy, Check, BarChart3, UserCheck, Hash, Package, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdmin } from "@/hooks/use-admin";
 import { useToast } from "@/hooks/use-toast";
+import AdminProducts from "@/components/admin/AdminProducts";
 
 interface UserItem {
   id: string;
@@ -12,6 +13,7 @@ interface UserItem {
   isPremium: boolean;
   premiumSince: string | null;
   premiumExpiresAt: string | null;
+  balance: number;
 }
 
 interface CodeItem {
@@ -41,7 +43,10 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 const Admin = () => {
   const { isAdmin, loading: adminLoading, adminCall } = useAdmin();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"overview" | "users" | "codes">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "codes" | "products">("overview");
+  const [addBalanceUserId, setAddBalanceUserId] = useState<string | null>(null);
+  const [addBalanceAmount, setAddBalanceAmount] = useState("");
+  const [addingBalance, setAddingBalance] = useState(false);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [codes, setCodes] = useState<CodeItem[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -202,10 +207,28 @@ const Admin = () => {
   const activeCodes = codes.filter(c => c.is_active).length;
   const totalCodeUses = codes.reduce((sum, c) => sum + c.current_uses, 0);
 
+  const handleAddBalance = async (userId: string) => {
+    const amount = parseInt(addBalanceAmount) || 0;
+    if (amount <= 0) return;
+    setAddingBalance(true);
+    try {
+      await adminCall("add-balance", { target_user_id: userId, amount });
+      toast({ title: `Đã nạp ${amount.toLocaleString()}đ` });
+      setAddBalanceUserId(null);
+      setAddBalanceAmount("");
+      loadUsers();
+    } catch (e) {
+      toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
+    } finally {
+      setAddingBalance(false);
+    }
+  };
+
   const tabs = [
     { key: "overview" as const, label: "Tổng quan", icon: BarChart3 },
     { key: "codes" as const, label: "Mã Premium", icon: KeyRound },
     { key: "users" as const, label: "Người dùng", icon: Users },
+    { key: "products" as const, label: "Sản phẩm", icon: Package },
   ];
 
   return (
@@ -392,12 +415,12 @@ const Admin = () => {
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Đăng ký: {new Date(u.created_at).toLocaleDateString("vi-VN")}
-                          {u.premiumSince && ` · Premium từ: ${new Date(u.premiumSince).toLocaleDateString("vi-VN")}`}
                           {u.premiumExpiresAt && ` · Hết hạn: ${new Date(u.premiumExpiresAt).toLocaleDateString("vi-VN")}`}
+                          {` · Số dư: ${(u.balance || 0).toLocaleString()}đ`}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       <Input
                         type="number"
                         value={grantDays[u.id] || ""}
@@ -406,11 +429,30 @@ const Admin = () => {
                         className="w-16 h-8 rounded-lg text-xs text-center"
                       />
                       <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => handleGrantPremium(u.id)}>
-                        Cấp
+                        Cấp Premium
                       </Button>
                       {u.isPremium && (
                         <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl text-destructive" onClick={() => handleRevokePremium(u.id)}>
                           Thu hồi
+                        </Button>
+                      )}
+                      {addBalanceUserId === u.id ? (
+                        <>
+                          <Input
+                            type="number"
+                            value={addBalanceAmount}
+                            onChange={(e) => setAddBalanceAmount(e.target.value)}
+                            placeholder="Số tiền"
+                            className="w-24 h-8 rounded-lg text-xs text-center"
+                          />
+                          <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => handleAddBalance(u.id)} disabled={addingBalance}>
+                            {addingBalance ? <Loader2 className="w-3 h-3 animate-spin" /> : "Nạp"}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setAddBalanceUserId(null)}>✕</Button>
+                        </>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => setAddBalanceUserId(u.id)}>
+                          <Wallet className="w-3 h-3 mr-1" /> Nạp tiền
                         </Button>
                       )}
                     </div>
@@ -419,6 +461,11 @@ const Admin = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Products Tab */}
+        {tab === "products" && (
+          <AdminProducts adminCall={adminCall} />
         )}
       </div>
     </div>

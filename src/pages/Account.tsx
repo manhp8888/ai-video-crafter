@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
-import { Crown, User, Calendar, Loader2, KeyRound } from "lucide-react";
+import { Crown, User, Calendar, Loader2, KeyRound, Wallet, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  created_at: string;
+}
 
 const Account = () => {
   const { toast } = useToast();
@@ -15,6 +23,8 @@ const Account = () => {
   const [code, setCode] = useState("");
   const [activating, setActivating] = useState(false);
   const [showInput, setShowInput] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -23,6 +33,7 @@ const Account = () => {
         if (!user) return;
         setEmail(user.email || "");
 
+        // Load premium status
         const { data } = await supabase
           .from("premium_activations")
           .select("expires_at")
@@ -37,15 +48,28 @@ const Account = () => {
               setIsPremium(true);
               setExpiresAt(data.expires_at);
               setDaysLeft(Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-            } else {
-              setIsPremium(false);
             }
           } else {
             setIsPremium(true);
-            setExpiresAt(null);
-            setDaysLeft(null);
           }
         }
+
+        // Load balance
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("id", user.id)
+          .maybeSingle();
+        setBalance(profile?.balance || 0);
+
+        // Load transactions
+        const { data: txns } = await supabase
+          .from("balance_transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        setTransactions((txns as Transaction[]) || []);
       } catch {
         // ignore
       } finally {
@@ -80,12 +104,10 @@ const Account = () => {
         return;
       }
 
-      // Calculate expires_at based on premium_days
-      const premiumDays = (codeData as Record<string, unknown>).premium_days as number || 30;
+      const premiumDays = codeData.premium_days || 30;
       const expiresDate = new Date();
       expiresDate.setDate(expiresDate.getDate() + premiumDays);
 
-      // Check existing activation
       const { data: existing } = await supabase
         .from("premium_activations")
         .select("id, expires_at")
@@ -93,7 +115,6 @@ const Account = () => {
         .maybeSingle();
 
       if (existing) {
-        // Extend: if existing expires_at is in the future, add days from there
         let baseDate = new Date();
         if (existing.expires_at) {
           const existingExp = new Date(existing.expires_at);
@@ -117,7 +138,6 @@ const Account = () => {
         setDaysLeft(premiumDays);
       }
 
-      // Increment usage
       await supabase
         .from("premium_codes")
         .update({ current_uses: codeData.current_uses + 1 })
@@ -144,8 +164,9 @@ const Account = () => {
 
   return (
     <div className="flex flex-col items-center px-4 py-6 gap-6">
-      <div className="w-full max-w-2xl">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="w-full max-w-2xl space-y-5">
+        {/* Header */}
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-[hsl(280,80%,55%)] flex items-center justify-center">
             <User className="w-5 h-5 text-primary-foreground" />
           </div>
@@ -153,6 +174,20 @@ const Account = () => {
             <h1 className="text-xl font-bold text-foreground">Tài khoản</h1>
             <p className="text-sm text-muted-foreground">{email}</p>
           </div>
+        </div>
+
+        {/* Balance Card */}
+        <div className="glass-card rounded-2xl p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-[hsl(280,80%,55%)] flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Số dư tài khoản</p>
+              <p className="text-2xl font-bold text-foreground">{balance.toLocaleString()}đ</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">Liên hệ Admin để nạp tiền vào tài khoản</p>
         </div>
 
         {/* Premium Status */}
@@ -173,13 +208,9 @@ const Account = () => {
                   </span>
                 </div>
               )}
-              {isPremium && !expiresAt && (
-                <p className="text-xs text-muted-foreground">Vĩnh viễn</p>
-              )}
             </div>
           </div>
 
-          {/* Activate code */}
           {!showInput ? (
             <Button
               variant={isPremium ? "outline" : "default"}
@@ -210,6 +241,37 @@ const Account = () => {
             </div>
           )}
         </div>
+
+        {/* Transaction History */}
+        {transactions.length > 0 && (
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-border">
+              <span className="text-sm font-semibold text-foreground">Lịch sử giao dịch</span>
+            </div>
+            <div className="divide-y divide-border">
+              {transactions.map((t) => (
+                <div key={t.id} className="flex items-center justify-between px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.amount > 0 ? "bg-success/10" : "bg-destructive/10"}`}>
+                      {t.amount > 0 ? (
+                        <ArrowDownLeft className="w-4 h-4 text-success" />
+                      ) : (
+                        <ArrowUpRight className="w-4 h-4 text-destructive" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{t.description || t.type}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString("vi-VN")}</p>
+                    </div>
+                  </div>
+                  <span className={`text-sm font-bold ${t.amount > 0 ? "text-success" : "text-destructive"}`}>
+                    {t.amount > 0 ? "+" : ""}{t.amount.toLocaleString()}đ
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

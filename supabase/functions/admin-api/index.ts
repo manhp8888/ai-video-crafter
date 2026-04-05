@@ -39,7 +39,6 @@ serve(async (req) => {
 
     switch (action) {
       case "init-admin": {
-        // Only works if no admins exist yet
         const { data: existingAdmins } = await supabaseAdmin
           .from("user_roles")
           .select("id")
@@ -47,9 +46,7 @@ serve(async (req) => {
         if (existingAdmins && existingAdmins.length > 0) {
           throw new Error("Admin already exists");
         }
-        // Ensure profile exists
         await supabaseAdmin.from("profiles").upsert({ id: user.id, email: user.email });
-        // Make current user admin
         await supabaseAdmin.from("user_roles").upsert({ user_id: user.id, role: "admin" });
         result = { success: true, message: "You are now admin" };
         break;
@@ -60,6 +57,8 @@ serve(async (req) => {
         if (error) throw error;
         const { data: activations } = await supabaseAdmin.from("premium_activations").select("user_id, activated_at, expires_at");
         const premiumMap = new Map((activations || []).map(a => [a.user_id, a]));
+        const { data: balances } = await supabaseAdmin.from("profiles").select("id, balance");
+        const balanceMap = new Map((balances || []).map(b => [b.id, b.balance]));
         
         result = (users || []).map(u => {
           const activation = premiumMap.get(u.id);
@@ -70,6 +69,7 @@ serve(async (req) => {
             isPremium: !!activation && (!activation.expires_at || new Date(activation.expires_at) > new Date()),
             premiumSince: activation?.activated_at || null,
             premiumExpiresAt: activation?.expires_at || null,
+            balance: balanceMap.get(u.id) || 0,
           };
         });
         break;
@@ -125,7 +125,6 @@ serve(async (req) => {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + numDays);
 
-        // Check existing
         const { data: existingActivation } = await supabaseAdmin
           .from("premium_activations")
           .select("id, expires_at")
@@ -143,7 +142,6 @@ serve(async (req) => {
             .update({ expires_at: baseDate.toISOString() })
             .eq("id", existingActivation.id);
         } else {
-          // Need a code_id - use a system code or create one
           let { data: sysCode } = await supabaseAdmin.from("premium_codes")
             .select("id").eq("code", "ADMIN-GRANT").maybeSingle();
           if (!sysCode) {
@@ -156,6 +154,114 @@ serve(async (req) => {
             .insert({ user_id: target_user_id as string, code_id: sysCode!.id, expires_at: expiresAt.toISOString() });
         }
         result = { success: true };
+        break;
+      }
+
+      // ===== MARKETPLACE PRODUCTS =====
+      case "list-products": {
+        const { data } = await supabaseAdmin.from("marketplace_products").select("*").order("created_at", { ascending: false });
+        result = data;
+        break;
+      }
+
+      case "create-product": {
+        const { title, description, price, category, image_url, content } = params;
+        if (!title) throw new Error("Title is required");
+        const { data, error } = await supabaseAdmin.from("marketplace_products").insert({
+          title: title as string,
+          description: (description as string) || null,
+          price: (price as number) || 0,
+          category: (category as string) || "prompt",
+          image_url: (image_url as string) || null,
+          content: (content as string) || null,
+          created_by: user.id,
+        }).select().single();
+        if (error) throw error;
+        result = data;
+        break;
+      }
+
+      case "update-product": {
+        const { product_id, ...updates } = params;
+        const { error } = await supabaseAdmin.from("marketplace_products").update(updates).eq("id", product_id as string);
+        if (error) throw error;
+        result = { success: true };
+        break;
+      }
+
+      case "delete-product": {
+        const { product_id } = params;
+        const { error } = await supabaseAdmin.from("marketplace_products").delete().eq("id", product_id as string);
+        if (error) throw error;
+        result = { success: true };
+        break;
+      }
+
+      case "toggle-product": {
+        const { product_id, is_active } = params;
+        const { error } = await supabaseAdmin.from("marketplace_products").update({ is_active }).eq("id", product_id as string);
+        if (error) throw error;
+        result = { success: true };
+        break;
+      }
+
+      // ===== USER BALANCE =====
+      case "add-balance": {
+        const { target_user_id, amount, description: desc } = params;
+        const numAmount = (amount as number) || 0;
+        if (numAmount <= 0) throw new Error("Amount must be positive");
+
+        // Ensure profile exists
+        await supabaseAdmin.from("profiles").upsert({ id: target_user_id as string });
+
+        // Get current balance
+        const { data: profile } = await supabaseAdmin.from("profiles").select("balance").eq("id", target_user_id as string).single();
+        const newBalance = (profile?.balance || 0) + numAmount;
+
+        await supabaseAdmin.from("profiles").update({ balance: newBalance }).eq("id", target_user_id as string);
+        await supabaseAdmin.from("balance_transactions").insert({
+          user_id: target_user_id as string,
+          amount: numAmount,
+          type: "topup",
+          description: (desc as string) || "Admin nạp tiền",
+        });
+        result = { success: true, balance: newBalance };
+        break;
+      }
+
+      // ===== PURCHASE (user action, but through admin API for atomicity) =====
+      case "purchase-product": {
+        const { product_id } = params;
+        const { data: product } = await supabaseAdmin.from("marketplace_products")
+          .select("*").eq("id", product_id as string).eq("is_active", true).single();
+        if (!product) throw new Error("Sản phẩm không tồn tại");
+
+        // Ensure profile
+        await supabaseAdmin.from("profiles").upsert({ id: user.id, email: user.email });
+
+        const { data: profile } = await supabaseAdmin.from("profiles").select("balance").eq("id", user.id).single();
+        const currentBalance = profile?.balance || 0;
+        if (currentBalance < product.price) throw new Error("Số dư không đủ");
+
+        // Check if already purchased
+        const { data: existing } = await supabaseAdmin.from("user_purchases")
+          .select("id").eq("user_id", user.id).eq("product_id", product_id as string).maybeSingle();
+        if (existing) throw new Error("Bạn đã mua sản phẩm này");
+
+        // Deduct balance
+        await supabaseAdmin.from("profiles").update({ balance: currentBalance - product.price }).eq("id", user.id);
+        await supabaseAdmin.from("balance_transactions").insert({
+          user_id: user.id,
+          amount: -product.price,
+          type: "purchase",
+          description: `Mua: ${product.title}`,
+        });
+        await supabaseAdmin.from("user_purchases").insert({
+          user_id: user.id,
+          product_id: product_id as string,
+        });
+
+        result = { success: true, content: product.content };
         break;
       }
 
