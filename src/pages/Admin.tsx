@@ -206,10 +206,28 @@ const Admin = () => {
   const activeCodes = codes.filter(c => c.is_active).length;
   const totalCodeUses = codes.reduce((sum, c) => sum + c.current_uses, 0);
 
+  const handleAddBalance = async (userId: string) => {
+    const amount = parseInt(addBalanceAmount) || 0;
+    if (amount <= 0) return;
+    setAddingBalance(true);
+    try {
+      await adminCall("add-balance", { target_user_id: userId, amount });
+      toast({ title: `Đã nạp ${amount.toLocaleString()}đ` });
+      setAddBalanceUserId(null);
+      setAddBalanceAmount("");
+      loadUsers();
+    } catch (e) {
+      toast({ title: "Lỗi", description: e instanceof Error ? e.message : "Lỗi", variant: "destructive" });
+    } finally {
+      setAddingBalance(false);
+    }
+  };
+
   const tabs = [
     { key: "overview" as const, label: "Tổng quan", icon: BarChart3 },
     { key: "codes" as const, label: "Mã Premium", icon: KeyRound },
     { key: "users" as const, label: "Người dùng", icon: Users },
+    { key: "products" as const, label: "Sản phẩm", icon: Package },
   ];
 
   return (
