@@ -42,7 +42,10 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 const Admin = () => {
   const { isAdmin, loading: adminLoading, adminCall } = useAdmin();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"overview" | "users" | "codes">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "codes" | "products">("overview");
+  const [addBalanceUserId, setAddBalanceUserId] = useState<string | null>(null);
+  const [addBalanceAmount, setAddBalanceAmount] = useState("");
+  const [addingBalance, setAddingBalance] = useState(false);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [codes, setCodes] = useState<CodeItem[]>([]);
   const [loadingData, setLoadingData] = useState(false);
