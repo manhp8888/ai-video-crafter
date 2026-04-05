@@ -415,12 +415,12 @@ const Admin = () => {
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Đăng ký: {new Date(u.created_at).toLocaleDateString("vi-VN")}
-                          {u.premiumSince && ` · Premium từ: ${new Date(u.premiumSince).toLocaleDateString("vi-VN")}`}
                           {u.premiumExpiresAt && ` · Hết hạn: ${new Date(u.premiumExpiresAt).toLocaleDateString("vi-VN")}`}
+                          {` · Số dư: ${(u.balance || 0).toLocaleString()}đ`}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       <Input
                         type="number"
                         value={grantDays[u.id] || ""}
@@ -429,13 +429,33 @@ const Admin = () => {
                         className="w-16 h-8 rounded-lg text-xs text-center"
                       />
                       <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => handleGrantPremium(u.id)}>
-                        Cấp
+                        Cấp Premium
                       </Button>
                       {u.isPremium && (
                         <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl text-destructive" onClick={() => handleRevokePremium(u.id)}>
                           Thu hồi
                         </Button>
                       )}
+                      {addBalanceUserId === u.id ? (
+                        <>
+                          <Input
+                            type="number"
+                            value={addBalanceAmount}
+                            onChange={(e) => setAddBalanceAmount(e.target.value)}
+                            placeholder="Số tiền"
+                            className="w-24 h-8 rounded-lg text-xs text-center"
+                          />
+                          <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => handleAddBalance(u.id)} disabled={addingBalance}>
+                            {addingBalance ? <Loader2 className="w-3 h-3 animate-spin" /> : "Nạp"}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setAddBalanceUserId(null)}>✕</Button>
+                        </>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl" onClick={() => setAddBalanceUserId(u.id)}>
+                          <Wallet className="w-3 h-3 mr-1" /> Nạp tiền
+                        </Button>
+                      )}
+                    </div>
                     </div>
                   </div>
                 ))}
