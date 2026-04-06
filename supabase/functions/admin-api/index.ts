@@ -236,6 +236,9 @@ serve(async (req) => {
           .select("*").eq("id", product_id as string).eq("is_active", true).single();
         if (!product) throw new Error("Sản phẩm không tồn tại");
 
+        // Check stock
+        if (product.stock === 0) throw new Error("Sản phẩm đã hết hàng");
+
         // Ensure profile
         await supabaseAdmin.from("profiles").upsert({ id: user.id, email: user.email });
 
@@ -260,6 +263,11 @@ serve(async (req) => {
           user_id: user.id,
           product_id: product_id as string,
         });
+
+        // Update stock & sales count
+        const updateData: Record<string, unknown> = { sales_count: (product.sales_count || 0) + 1 };
+        if (product.stock > 0) updateData.stock = product.stock - 1;
+        await supabaseAdmin.from("marketplace_products").update(updateData).eq("id", product_id as string);
 
         result = { success: true, content: product.content };
         break;
