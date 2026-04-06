@@ -48,10 +48,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          details: string | null
           id: string
           image_url: string | null
           is_active: boolean
           price: number
+          sales_count: number | null
+          stock: number | null
           title: string
         }
         Insert: {
@@ -60,10 +63,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          details?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           price?: number
+          sales_count?: number | null
+          stock?: number | null
           title: string
         }
         Update: {
@@ -72,10 +78,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          details?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           price?: number
+          sales_count?: number | null
+          stock?: number | null
           title?: string
         }
         Relationships: []
