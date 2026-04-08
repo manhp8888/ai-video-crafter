@@ -24,8 +24,9 @@ serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
-    // Check if user is admin (except for init-admin which bootstraps)
-    if (action !== "init-admin") {
+    // Check if user is admin (except for init-admin and user-facing actions)
+    const userActions = ["purchase-product", "list-user-purchases"];
+    if (action !== "init-admin" && !userActions.includes(action)) {
       const { data: roleData } = await supabaseAdmin
         .from("user_roles")
         .select("role")
@@ -270,6 +271,16 @@ serve(async (req) => {
         await supabaseAdmin.from("marketplace_products").update(updateData).eq("id", product_id as string);
 
         result = { success: true, content: product.content };
+        break;
+      }
+
+      case "list-user-purchases": {
+        const { data } = await supabaseAdmin
+          .from("user_purchases")
+          .select("id, product_id, purchased_at, marketplace_products(id, title, description, price, category, image_url, content)")
+          .eq("user_id", user.id)
+          .order("purchased_at", { ascending: false });
+        result = data;
         break;
       }
 
