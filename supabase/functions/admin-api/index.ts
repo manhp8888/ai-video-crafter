@@ -24,8 +24,9 @@ serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
-    // Check if user is admin (except for init-admin which bootstraps)
-    if (action !== "init-admin") {
+    // Check if user is admin (except for init-admin and user-facing actions)
+    const userActions = ["purchase-product", "list-user-purchases"];
+    if (action !== "init-admin" && !userActions.includes(action)) {
       const { data: roleData } = await supabaseAdmin
         .from("user_roles")
         .select("role")
