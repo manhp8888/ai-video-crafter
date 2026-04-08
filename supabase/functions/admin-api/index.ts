@@ -274,6 +274,16 @@ serve(async (req) => {
         break;
       }
 
+      case "list-user-purchases": {
+        const { data } = await supabaseAdmin
+          .from("user_purchases")
+          .select("id, product_id, purchased_at, marketplace_products(id, title, description, price, category, image_url, content)")
+          .eq("user_id", user.id)
+          .order("purchased_at", { ascending: false });
+        result = data;
+        break;
+      }
+
       default:
         throw new Error("Unknown action");
     }
