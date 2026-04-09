@@ -354,10 +354,19 @@ serve(async (req) => {
       case "list-user-purchases": {
         const { data } = await supabaseAdmin
           .from("user_purchases")
-          .select("id, product_id, purchased_at, marketplace_products(id, title, description, price, category, image_url, content)")
+          .select("id, product_id, purchased_at, marketplace_products(id, title, description, price, category, image_url)")
           .eq("user_id", user.id)
           .order("purchased_at", { ascending: false });
-        result = data;
+        // Attach individual item content for each purchase
+        const enriched = await Promise.all((data || []).map(async (p: Record<string, unknown>) => {
+          const { data: item } = await supabaseAdmin.from("product_items")
+            .select("content")
+            .eq("product_id", p.product_id as string)
+            .eq("sold_to", user.id)
+            .maybeSingle();
+          return { ...p, item_content: item?.content || null };
+        }));
+        result = enriched;
         break;
       }
 
