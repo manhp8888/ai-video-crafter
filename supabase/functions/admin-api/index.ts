@@ -305,6 +305,23 @@ serve(async (req) => {
           .select("id").eq("user_id", user.id).eq("product_id", product_id as string).maybeSingle();
         if (existing) throw new Error("Bạn đã mua sản phẩm này");
 
+        // Try to claim an individual item first
+        let itemContent: string | null = null;
+        const { data: availableItem } = await supabaseAdmin.from("product_items")
+          .select("id, content")
+          .eq("product_id", product_id as string)
+          .eq("is_sold", false)
+          .limit(1)
+          .maybeSingle();
+
+        if (availableItem) {
+          // Mark item as sold
+          await supabaseAdmin.from("product_items")
+            .update({ is_sold: true, sold_to: user.id, sold_at: new Date().toISOString() })
+            .eq("id", availableItem.id);
+          itemContent = availableItem.content;
+        }
+
         // Deduct balance
         await supabaseAdmin.from("profiles").update({ balance: currentBalance - product.price }).eq("id", user.id);
         await supabaseAdmin.from("balance_transactions").insert({
@@ -319,11 +336,18 @@ serve(async (req) => {
         });
 
         // Update stock & sales count
-        const updateData: Record<string, unknown> = { sales_count: (product.sales_count || 0) + 1 };
-        if (product.stock > 0) updateData.stock = product.stock - 1;
+        const { count: remainingStock } = await supabaseAdmin.from("product_items")
+          .select("*", { count: "exact", head: true })
+          .eq("product_id", product_id as string)
+          .eq("is_sold", false);
+        const updateData: Record<string, unknown> = {
+          sales_count: (product.sales_count || 0) + 1,
+          stock: remainingStock ?? (product.stock > 0 ? product.stock - 1 : product.stock),
+        };
         await supabaseAdmin.from("marketplace_products").update(updateData).eq("id", product_id as string);
 
-        result = { success: true, content: product.content };
+        // Return individual item content, or fallback to product-level content
+        result = { success: true, content: itemContent || product.content };
         break;
       }
 
