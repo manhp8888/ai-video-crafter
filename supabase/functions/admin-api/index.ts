@@ -206,6 +206,59 @@ serve(async (req) => {
         break;
       }
 
+      // ===== PRODUCT ITEMS (individual accounts/content) =====
+      case "list-product-items": {
+        const { product_id } = params;
+        const { data } = await supabaseAdmin.from("product_items")
+          .select("*")
+          .eq("product_id", product_id as string)
+          .order("created_at", { ascending: false });
+        result = data;
+        break;
+      }
+
+      case "add-product-items": {
+        const { product_id, items } = params;
+        if (!items || !Array.isArray(items) || items.length === 0) throw new Error("Items required");
+        const rows = (items as string[]).map(content => ({
+          product_id: product_id as string,
+          content,
+        }));
+        const { error } = await supabaseAdmin.from("product_items").insert(rows);
+        if (error) throw error;
+        // Update stock count
+        const { count } = await supabaseAdmin.from("product_items")
+          .select("*", { count: "exact", head: true })
+          .eq("product_id", product_id as string)
+          .eq("is_sold", false);
+        await supabaseAdmin.from("marketplace_products")
+          .update({ stock: count || 0 })
+          .eq("id", product_id as string);
+        result = { success: true };
+        break;
+      }
+
+      case "delete-product-item": {
+        const { item_id } = params;
+        const { data: item } = await supabaseAdmin.from("product_items")
+          .select("product_id, is_sold").eq("id", item_id as string).single();
+        if (item?.is_sold) throw new Error("Cannot delete sold item");
+        const { error } = await supabaseAdmin.from("product_items").delete().eq("id", item_id as string);
+        if (error) throw error;
+        // Update stock
+        if (item) {
+          const { count } = await supabaseAdmin.from("product_items")
+            .select("*", { count: "exact", head: true })
+            .eq("product_id", item.product_id)
+            .eq("is_sold", false);
+          await supabaseAdmin.from("marketplace_products")
+            .update({ stock: count || 0 })
+            .eq("id", item.product_id);
+        }
+        result = { success: true };
+        break;
+      }
+
       // ===== USER BALANCE =====
       case "add-balance": {
         const { target_user_id, amount, description: desc } = params;
