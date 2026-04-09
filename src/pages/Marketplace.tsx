@@ -26,6 +26,7 @@ interface Purchase {
   id: string;
   product_id: string;
   purchased_at: string;
+  item_content: string | null;
   marketplace_products: {
     id: string;
     title: string;
@@ -33,7 +34,6 @@ interface Purchase {
     price: number;
     category: string;
     image_url: string | null;
-    content: string | null;
   };
 }
 
@@ -295,13 +295,13 @@ const Marketplace = () => {
                           <p className="text-[10px] text-muted-foreground mt-auto pt-2">
                             {new Date(p.purchased_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
-                          {prod.content && (
+                          {(p.item_content) && (
                             <div className="flex gap-2 pt-2 border-t border-border/50">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="rounded-xl text-xs h-9 flex-1"
-                                onClick={() => setViewContent({ title: prod.title, content: prod.content! })}
+                                onClick={() => setViewContent({ title: prod.title, content: p.item_content! })}
                               >
                                 <Eye className="w-3.5 h-3.5 mr-1.5" /> Xem nội dung
                               </Button>
@@ -309,7 +309,7 @@ const Marketplace = () => {
                                 size="sm"
                                 variant="ghost"
                                 className="rounded-xl text-xs h-9 w-9 p-0"
-                                onClick={() => { navigator.clipboard.writeText(prod.content!); toast({ title: "Đã copy!" }); }}
+                                onClick={() => { navigator.clipboard.writeText(p.item_content!); toast({ title: "Đã copy!" }); }}
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </Button>
@@ -490,7 +490,7 @@ const Marketplace = () => {
                               size="sm"
                               variant="outline"
                               className="rounded-xl text-xs h-9"
-                              onClick={(e) => { e.stopPropagation(); p.content && setViewContent({ title: p.title, content: p.content }); }}
+                              onClick={(e) => { e.stopPropagation(); setTab("purchased"); }}
                             >
                               <Eye className="w-3.5 h-3.5 mr-1" /> Xem
                             </Button>
