@@ -490,7 +490,7 @@ const Marketplace = () => {
                               size="sm"
                               variant="outline"
                               className="rounded-xl text-xs h-9"
-                              onClick={(e) => { e.stopPropagation(); p.content && setViewContent({ title: p.title, content: p.content }); }}
+                              onClick={(e) => { e.stopPropagation(); setTab("purchased"); }}
                             >
                               <Eye className="w-3.5 h-3.5 mr-1" /> Xem
                             </Button>
