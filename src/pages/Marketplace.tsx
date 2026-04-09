@@ -26,6 +26,7 @@ interface Purchase {
   id: string;
   product_id: string;
   purchased_at: string;
+  item_content: string | null;
   marketplace_products: {
     id: string;
     title: string;
@@ -33,7 +34,6 @@ interface Purchase {
     price: number;
     category: string;
     image_url: string | null;
-    content: string | null;
   };
 }
 
