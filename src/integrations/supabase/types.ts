@@ -154,6 +154,44 @@ export type Database = {
         }
         Relationships: []
       }
+      product_items: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_sold: boolean
+          product_id: string
+          sold_at: string | null
+          sold_to: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_sold?: boolean
+          product_id: string
+          sold_at?: string | null
+          sold_to?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_sold?: boolean
+          product_id?: string
+          sold_at?: string | null
+          sold_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           balance: number
